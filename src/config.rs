@@ -1,0 +1,140 @@
+use std::path::PathBuf;
+
+use clap::Parser;
+use figment::{
+    Figment,
+    providers::{Format, Json, Serialized, Toml, Yaml},
+};
+use serde::{Deserialize, Serialize};
+
+#[derive(Parser, Debug, Serialize, Deserialize)]
+#[command(version, about, long_about = None)]
+pub struct Config {
+    #[serde(skip)]
+    #[arg(
+        short = 'c',
+        long = "config",
+        value_name = "FILE",
+        help = "Path to config file"
+    )]
+    pub config_file_path: Option<PathBuf>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(
+        short = 't',
+        long = "tray",
+        value_name = "BOOL",
+        env = "SISR_TRAY",
+        help = "Enable system tray icon (true/false) [default: true]"
+    )]
+    pub tray: Option<bool>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(
+        long = "viiper-address",
+        env = "SISR_VIIPER_ADDRESS",
+        help = "VIIPER API-server address [default: localhost:3242]"
+    )]
+    pub viiper_address: Option<String>,
+
+    #[command(flatten)]
+    pub window: WindowOpts,
+
+    #[command(flatten)]
+    pub log: LogOpts,
+
+    #[serde(skip)]
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    pub debug: u8,
+}
+
+#[derive(Parser, Debug, Serialize, Deserialize)]
+pub struct WindowOpts {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(
+        short = 'w',
+        long = "window-create",
+        value_name = "BOOL",
+        env = "SISR_WINDOW_CREATE",
+        help = "Create a transparent window (true/false) [default: false]"
+    )]
+    pub create: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(
+        short = 'f',
+        long = "window-fullscreen",
+        env = "SISR_WINDOW_FULLSCREEN",
+        help = "Create a fullscreen window [default: true]"
+    )]
+    pub fullscreen: Option<bool>,
+}
+
+#[derive(Parser, Debug, Serialize, Deserialize)]
+pub struct LogOpts {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(
+        short = 'l',
+        long = "log-level",
+        value_name = "LEVEL",
+        env = "SISR_LOG_LEVEL",
+        help = "Set the logging level (error, warn, info, debug, trace) [default: info]"
+    )]
+    pub level: Option<String>,
+
+    #[command(flatten)]
+    pub log_file: Option<LogFile>,
+}
+
+#[derive(Parser, Debug, Serialize, Deserialize)]
+pub struct LogFile {
+    #[serde()]
+    #[arg(
+        long = "log-file",
+        value_name = "FILE",
+        env = "SISR_LOG_FILE",
+        help = "Path to log file"
+    )]
+    pub path: Option<PathBuf>,
+    #[serde(default, alias = "level", skip_serializing_if = "Option::is_none")]
+    pub file_level: Option<String>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            config_file_path: None,
+            tray: Some(true),
+            viiper_address: Some("localhost:3242".to_string()),
+            window: WindowOpts {
+                create: Some(false),
+                fullscreen: Some(true),
+            },
+            log: LogOpts {
+                level: tracing::Level::INFO.to_string().into(),
+                log_file: None,
+            },
+            debug: 0,
+        }
+    }
+}
+
+impl Config {
+    pub fn parse() -> Self {
+        let cli_args = <Self as Parser>::parse();
+        Figment::from(Serialized::defaults(Config::default()))
+            .merge({
+                match &cli_args.config_file_path {
+                    None => Figment::new(),
+                    Some(path) => match path.extension().and_then(|s| s.to_str()) {
+                        Some("toml") => Figment::from(Toml::file(path)),
+                        Some("yaml" | "yml") => Figment::from(Yaml::file(path)),
+                        Some("json") => Figment::from(Json::file(path)),
+                        _ => Figment::from(Toml::file(path)),
+                    },
+                }
+            })
+            .merge(Serialized::defaults(&cli_args))
+            .extract()
+            .unwrap()
+    }
+}
