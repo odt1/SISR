@@ -23,7 +23,7 @@ Unlike it's predecessor [GlosSI](https://github.com/Alia5/GlosSI), SISR uses [VI
 
 1. Add SISR as a non-Steam game to your Steam library
 2. Add the following launch arguments to SISR's Steam entry  
-   `--window.create=true --window.fullscreen=false --console`
+   `--window-create=true --window-fullscreen=false --console`
 3. Launch a VIIPER server on your system _(will be bundled in future releases, **maybe, soon™**)_
 4. Launch SISR through Steam (so Steam Input can process your controllers)
 5. SISR captures Steam-processed gamepad inputs and creates virtual Xbox 360 controllers via VIIPER
