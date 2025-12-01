@@ -11,20 +11,23 @@ use viiper_client::{DeviceStream, ViiperClient};
 use crate::app::input::device::Device;
 
 /// Custom SDL event pushed when VIIPER server disconnects a device
-pub struct ViiperDisconnectEvent {
-    pub device_id: u32,
+pub enum ViiperEvent {
+    Disconnect { device_id: u32 },
+    Connect { device_id: u32, todo: () },
 }
 
 pub(super) struct ViiperBridge {
     client: Option<ViiperClient>,
     streams: Arc<Mutex<HashMap<u32, DeviceStream>>>,
     sdl_waker: Arc<Mutex<Option<EventSender>>>,
+    async_handle: tokio::runtime::Handle,
 }
 
 impl ViiperBridge {
     pub fn new(
         viiper_address: Option<SocketAddr>,
         sdl_waker: Arc<Mutex<Option<EventSender>>>,
+        async_handle: tokio::runtime::Handle,
     ) -> Self {
         Self {
             client: match viiper_address {
@@ -36,6 +39,7 @@ impl ViiperBridge {
             },
             streams: Arc::new(Mutex::new(HashMap::new())),
             sdl_waker,
+            async_handle,
         }
     }
 
@@ -88,7 +92,7 @@ impl ViiperBridge {
                 if let Ok(guard) = sdl_waker.lock()
                     && let Some(sender) = &*guard
                 {
-                    let _ = sender.push_custom_event(ViiperDisconnectEvent { device_id });
+                    let _ = sender.push_custom_event(ViiperEvent::Disconnect { device_id });
                 }
             })
             .map_err(|e| anyhow!("Failed to register disconnect callback: {}", e))?;

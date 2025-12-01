@@ -72,12 +72,12 @@ macro_rules! event_which {
     };
 }
 
-#[derive(Default)]
 pub struct InputLoop {
     sdl_waker: Arc<Mutex<Option<EventSender>>>,
     winit_waker: Arc<Mutex<Option<EventLoopProxy<RunnerEvent>>>>,
     gui_dispatcher: Arc<Mutex<Option<GuiDispatcher>>>,
     somedummy: Arc<Mutex<SomeTodoDummyDebugState>>,
+    async_handle: tokio::runtime::Handle,
 }
 
 #[derive(Default)]
@@ -90,12 +90,14 @@ impl InputLoop {
         sdl_waker: Arc<Mutex<Option<EventSender>>>,
         winit_waker: Arc<Mutex<Option<EventLoopProxy<RunnerEvent>>>>,
         gui_dispatcher: Arc<Mutex<Option<GuiDispatcher>>>,
+        async_handle: tokio::runtime::Handle,
     ) -> Self {
         Self {
             sdl_waker,
             winit_waker,
             gui_dispatcher,
             somedummy: Arc::new(Mutex::new(SomeTodoDummyDebugState::default())),
+            async_handle,
         }
     }
 
@@ -126,7 +128,7 @@ impl InputLoop {
         match sdl.event() {
             Ok(event_subsystem) => {
                 if let Err(e) =
-                    event_subsystem.register_custom_event::<super::handler::ViiperDisconnectEvent>()
+                    event_subsystem.register_custom_event::<super::handler::ViiperEvent>()
                 {
                     error!("Failed to register VIIPER disconnect event: {}", e);
                 }
@@ -189,6 +191,7 @@ impl InputLoop {
             self.winit_waker.clone(),
             self.gui_dispatcher.clone(),
             viiper_address,
+            self.async_handle.clone(),
         );
         trace!("SDL loop starting");
         loop {
@@ -227,11 +230,10 @@ impl InputLoop {
                     },
                     _ => {
                         if event.is_user_event()
-                            && let Some(disconnect_event) =
-                                event.as_user_event_type::<super::handler::ViiperDisconnectEvent>()
+                            && let Some(viiper_event) =
+                                event.as_user_event_type::<super::handler::ViiperEvent>()
                         {
-                            pad_event_handler.on_viiper_disconnect(disconnect_event.device_id);
-                            redraw = true;
+                            pad_event_handler.on_viiper_event(viiper_event);
                             continue;
                         }
 

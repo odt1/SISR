@@ -3,7 +3,7 @@ mod gui;
 mod viiper_bridge;
 
 use viiper_bridge::ViiperBridge;
-pub use viiper_bridge::ViiperDisconnectEvent;
+pub use viiper_bridge::ViiperEvent;
 
 use std::{
     collections::HashMap,
@@ -24,6 +24,7 @@ use crate::app::{
 pub struct EventHandler {
     winit_waker: Arc<Mutex<Option<EventLoopProxy<RunnerEvent>>>>,
     gui_dispatcher: Arc<Mutex<Option<GuiDispatcher>>>,
+    async_handle: tokio::runtime::Handle,
     sdl_joystick: sdl3::JoystickSubsystem,
     sdl_gamepad: sdl3::GamepadSubsystem,
     sdl_devices: HashMap<u32, Vec<SDLDevice>>,
@@ -43,6 +44,7 @@ impl EventHandler {
         winit_waker: Arc<Mutex<Option<EventLoopProxy<RunnerEvent>>>>,
         gui_dispatcher: Arc<Mutex<Option<GuiDispatcher>>>,
         viiper_address: Option<SocketAddr>,
+        async_handle: tokio::runtime::Handle,
     ) -> Self {
         let sdl = sdl3::init()
             .inspect_err(|e| error!("failed to get handle on SDL: {}", e))
@@ -52,14 +54,16 @@ impl EventHandler {
             viiper_address,
             viiper_bus: None,
         }));
+        let clone_handle = async_handle.clone();
         let res = Self {
             winit_waker,
             gui_dispatcher,
+            async_handle,
             sdl_joystick: sdl.joystick().unwrap(),
             sdl_gamepad: sdl.gamepad().unwrap(),
             sdl_devices: HashMap::new(),
             state: state.clone(),
-            viiper: ViiperBridge::new(viiper_address, sdl_waker),
+            viiper: ViiperBridge::new(viiper_address, sdl_waker, clone_handle),
         };
         if let Ok(dispatcher_guard) = res.gui_dispatcher.lock()
             && let Some(dispatcher) = &*dispatcher_guard

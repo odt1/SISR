@@ -34,6 +34,11 @@ impl App {
         debug!("Running application...");
         debug!("Config: {:?}", self.cfg);
 
+        let async_rt = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .expect("Failed to create async (tokio) runtime");
+
         let sdl_waker = self.sdl_waker.clone();
         let winit_waker_for_sdl = self.winit_waker.clone();
         let dispatcher = self.gui_dispatcher.clone();
@@ -42,6 +47,7 @@ impl App {
             sdl_waker,
             winit_waker_for_sdl,
             dispatcher,
+            async_rt.handle().clone(),
         ))));
 
         let tray_handle = if self.cfg.tray.unwrap_or(true) {

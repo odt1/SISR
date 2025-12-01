@@ -22,8 +22,10 @@ sdl3 = { version = "0.16.2", features = ["hidapi", "build-from-source"] }
 ctrlc = { version = "3.5.1", features = ["termination"] }
 tray-icon = "0.21.2"
 image = "0.25.9"
-viiper-client = { path = "../VIIPER/clients/rust" }
+viiper-client = { path = "../VIIPER/clients/rust", features = ["async"] }
 anyhow = "1.0.100"
+tokio = { version = "1", features = ["rt-multi-thread", "sync"] }
+
 
 
 [target."cfg(windows)".dependencies]
