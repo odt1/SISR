@@ -1,5 +1,8 @@
+use core::net;
 use sdl3::event::EventSender;
+use std::net::ToSocketAddrs;
 use std::process::ExitCode;
+use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use tracing::{debug, error, info, warn};
@@ -64,11 +67,19 @@ impl App {
 
         let mut exit_code = ExitCode::SUCCESS;
 
+        let viiper_address = self.cfg.viiper_address.as_ref().and_then(|addr_str| {
+            addr_str
+                .to_socket_addrs()
+                .map_err(|e| error!("Invalid VIIPER address '{}': {}", addr_str, e))
+                .ok()
+                .and_then(|mut addrs| addrs.next())
+        });
+
         let create_sdl_handle = move || {
             if let Ok(mut guard) = input_loop.lock()
                 && let Some(mut input_loop) = guard.take()
             {
-                input_loop.run();
+                input_loop.run(viiper_address);
             }
         };
         let sdl_handle: thread::JoinHandle<()>;

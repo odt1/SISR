@@ -76,11 +76,11 @@ impl WindowRunner {
     fn build_ui(dispatcher: &GuiDispatcher, ctx: &Context) {
         // TODO: Render UI However, whenever, whatever
 
-        egui::Window::new("⚙ Settings").show(ctx, |ui| {
+        egui::Window::new("⚙ EGUI Settings").show(ctx, |ui| {
             ctx.settings_ui(ui);
         });
 
-        egui::Window::new("🔍 Inspection").show(ctx, |ui| {
+        egui::Window::new("🔍 EGUI Inspection").show(ctx, |ui| {
             ctx.inspection_ui(ui);
         });
         dispatcher.draw(ctx);

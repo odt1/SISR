@@ -3,13 +3,74 @@ use std::sync::{Arc, Mutex};
 use crate::app::{
     App,
     gui::dispatcher::GuiDispatcher,
-    input::{gamepad::EventHandler, sdl_hints},
+    input::{handler::EventHandler, sdl_hints},
     window::RunnerEvent,
 };
-use sdl3::event::{Event, EventSender};
 use sdl3::sys::events;
+use sdl3::{
+    event::{Event, EventSender},
+    gamepad::Gamepad,
+};
 use tracing::{Level, debug, error, span, trace, warn};
 use winit::event_loop::EventLoopProxy;
+
+//
+
+pub fn get_gamepad_steam_handle(pad: &Gamepad) -> u64 {
+    use sdl3::sys::gamepad::SDL_GetGamepadSteamHandle;
+    let instance_id = pad.id().unwrap_or(0);
+    if instance_id == 0 {
+        trace!("Cannot get steam handle for device with invalid instance ID 0");
+        return 0;
+    }
+
+    unsafe {
+        // Extract the raw SDL_Gamepad pointer from the opened gamepad
+        // sdl3-0.16.2\src\sdl3\gamepad.rs:745
+        #[repr(C)]
+        struct GamepadRaw {
+            _subsystem: [u8; std::mem::size_of::<sdl3::GamepadSubsystem>()],
+            raw: *mut sdl3::sys::gamepad::SDL_Gamepad,
+        }
+
+        let gamepad_raw: &GamepadRaw = std::mem::transmute(pad);
+        if gamepad_raw.raw.is_null() {
+            warn!(
+                "Gamepad raw pointer is null for instance ID {}",
+                instance_id
+            );
+            return 0;
+        }
+
+        SDL_GetGamepadSteamHandle(gamepad_raw.raw)
+    }
+}
+
+macro_rules! event_which {
+    ($event:expr) => {
+        match $event {
+            Event::JoyAxisMotion { which, .. }
+            | Event::JoyBallMotion { which, .. }
+            | Event::JoyHatMotion { which, .. }
+            | Event::JoyButtonDown { which, .. }
+            | Event::JoyButtonUp { which, .. }
+            | Event::JoyDeviceAdded { which, .. }
+            | Event::JoyDeviceRemoved { which, .. }
+            // FUCK RUSTFMT
+            | Event::ControllerAxisMotion { which, .. }
+            | Event::ControllerButtonDown { which, .. }
+            | Event::ControllerButtonUp { which, .. }
+            | Event::ControllerDeviceAdded { which, .. }
+            | Event::ControllerDeviceRemoved { which, .. }
+            | Event::ControllerDeviceRemapped { which, .. }
+            | Event::ControllerTouchpadDown { which, .. }
+            | Event::ControllerTouchpadMotion { which, .. }
+            | Event::ControllerTouchpadUp { which, .. }
+            | Event::ControllerSensorUpdated { which, .. } => Some(*which),
+            _ => None,
+        }
+    };
+}
 
 #[derive(Default)]
 pub struct InputLoop {
@@ -38,7 +99,7 @@ impl InputLoop {
         }
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self, viiper_address: Option<std::net::SocketAddr>) {
         trace!("SDL_Init");
 
         let sdl = match sdl3::init() {
@@ -97,7 +158,7 @@ impl InputLoop {
             });
         }
 
-        match self.run_loop(&mut event_pump) {
+        match self.run_loop(&mut event_pump, viiper_address) {
             Ok(_) => {}
             Err(_) => {
                 error!("SDL loop exited with error");
@@ -108,11 +169,18 @@ impl InputLoop {
         App::shutdown(None, Some(&self.winit_waker));
     }
 
-    fn run_loop(&mut self, event_pump: &mut sdl3::EventPump) -> Result<(), ()> {
+    fn run_loop(
+        &mut self,
+        event_pump: &mut sdl3::EventPump,
+        viiper_address: Option<std::net::SocketAddr>,
+    ) -> Result<(), ()> {
         let span = span!(Level::INFO, "sdl_loop");
 
-        let mut pad_event_handler =
-            EventHandler::new(self.winit_waker.clone(), self.gui_dispatcher.clone());
+        let mut pad_event_handler = EventHandler::new(
+            self.winit_waker.clone(),
+            self.gui_dispatcher.clone(),
+            viiper_address,
+        );
         trace!("SDL loop starting");
         loop {
             let mut redraw = false;

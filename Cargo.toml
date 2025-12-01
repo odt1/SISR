@@ -7,8 +7,8 @@ edition = "2024"
 clap = { version = "4.5.53", features = ["derive", "env"] }
 serde = { version = "1", features = ["derive"] }
 figment = { version = "0.10", features = ["json", "toml", "yaml"] }
-tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.20" }
+tracing = "0.1.43"
+tracing-subscriber = { version = "0.3.22" }
 chrono = "0.4.42"
 winit = "0.30.12"
 wgpu = "27.0.1"
@@ -22,6 +22,9 @@ sdl3 = { version = "0.16.2", features = ["hidapi", "build-from-source"] }
 ctrlc = { version = "3.5.1", features = ["termination"] }
 tray-icon = "0.21.2"
 image = "0.25.9"
+viiper-client = { path = "../VIIPER/clients/rust" }
+anyhow = "1.0.100"
+
 
 [target."cfg(windows)".dependencies]
 windows-sys = { version = "0.61.2", features = [
