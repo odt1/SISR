@@ -14,6 +14,7 @@ pub struct Gfx {
     pub device: Device,
     pub queue: Queue,
     pub config: SurfaceConfiguration,
+    pub max_texture_dimension: u32,
 }
 
 impl Gfx {
@@ -61,7 +62,7 @@ impl Gfx {
         let device_desc = wgpu::DeviceDescriptor {
             label: None,
             required_features: wgpu::Features::empty(),
-            required_limits: wgpu::Limits::downlevel_webgl2_defaults(),
+            required_limits: wgpu::Limits::default(),
             experimental_features: Default::default(),
             memory_hints: Default::default(),
             trace: Default::default(),
@@ -110,18 +111,20 @@ impl Gfx {
             desired_maximum_frame_latency: 2,
         };
         surface.configure(&device, &config);
+        let max_texture_dimension = device.limits().max_texture_dimension_2d;
         Self {
             surface,
             device,
             queue,
             config,
+            max_texture_dimension,
         }
     }
 
     pub fn resize(&mut self, width: u32, height: u32) {
         if width > 0 && height > 0 {
-            self.config.width = width;
-            self.config.height = height;
+            self.config.width = width.min(self.max_texture_dimension);
+            self.config.height = height.min(self.max_texture_dimension);
             self.surface.configure(&self.device, &self.config);
         }
     }
