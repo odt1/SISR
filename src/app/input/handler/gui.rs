@@ -43,12 +43,13 @@ impl EventHandler {
                             for (idx, info) in device.sdl_device_infos.iter().enumerate() {
                                 ui.collapsing(
                                     format!(
-                                        "SDL {} #{}",
+                                        "SDL {} #{}-{}",
                                         if info.is_gamepad {
                                             "Gamepad"
                                         } else {
                                             "Joystick"
                                         },
+                                        device.id,
                                         idx
                                     ),
                                     |ui| {
@@ -57,17 +58,19 @@ impl EventHandler {
                                 );
                             }
 
-                            ui.collapsing("🐍 VIIPER Device", |ui| match &device.viiper_device {
-                                Some(viiper_dev) => {
-                                    ui.label(format!("Connected: {}", device.viiper_connected));
-                                    ui.label(format!("Bus ID: {}", viiper_dev.bus_id));
-                                    ui.label(format!("Device ID: {}", viiper_dev.dev_id));
-                                    ui.label(format!("Type: {}", viiper_dev.r#type));
-                                    ui.label(format!("Vendor ID: {:?}", viiper_dev.vid));
-                                    ui.label(format!("Product ID: {:?}", viiper_dev.pid));
-                                }
-                                None => {
-                                    ui.label("Not connected");
+                            ui.collapsing(format!("🐍 VIIPER Device #{}", device.id), |ui| {
+                                match &device.viiper_device {
+                                    Some(viiper_dev) => {
+                                        ui.label(format!("Connected: {}", device.viiper_connected));
+                                        ui.label(format!("Bus ID: {}", viiper_dev.bus_id));
+                                        ui.label(format!("Device ID: {}", viiper_dev.dev_id));
+                                        ui.label(format!("Type: {}", viiper_dev.r#type));
+                                        ui.label(format!("Vendor ID: {:?}", viiper_dev.vid));
+                                        ui.label(format!("Product ID: {:?}", viiper_dev.pid));
+                                    }
+                                    None => {
+                                        ui.label("Not connected");
+                                    }
                                 }
                             });
                         });
