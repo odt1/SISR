@@ -12,7 +12,7 @@ use std::{
 };
 
 use sdl3::event::EventSender;
-use tracing::{debug, error};
+use tracing::debug;
 use winit::event_loop::EventLoopProxy;
 
 use crate::app::{
@@ -28,6 +28,10 @@ pub struct EventHandler {
     sdl_joystick: sdl3::JoystickSubsystem,
     sdl_gamepad: sdl3::GamepadSubsystem,
     sdl_devices: HashMap<u32, Vec<SDLDevice>>,
+    /// Reverse lookup: SDL instance ID → our Device ID
+    sdl_id_to_device: HashMap<u32, u64>,
+    /// Counter for generating unique device IDs
+    next_device_id: u64,
     viiper: ViiperBridge,
     state: Arc<Mutex<State>>,
 }
@@ -59,6 +63,8 @@ impl EventHandler {
             sdl_joystick,
             sdl_gamepad,
             sdl_devices: HashMap::new(),
+            sdl_id_to_device: HashMap::new(),
+            next_device_id: 1,
             state: state.clone(),
             viiper: ViiperBridge::new(viiper_address, sdl_waker, clone_handle),
         };

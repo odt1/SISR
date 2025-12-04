@@ -6,7 +6,7 @@ use anyhow::Result;
 use sdl3::event::EventSender;
 use tokio::io::AsyncReadExt;
 use tokio::sync::mpsc;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 use viiper_client::AsyncViiperClient;
 use viiper_client::devices::xbox360;
 
@@ -18,34 +18,34 @@ enum StreamCommand {
 
 pub enum ViiperEvent {
     ServerDisconnected {
-        device_id: u32,
+        device_id: u64,
     },
     DeviceCreated {
-        device_id: u32,
+        device_id: u64,
         viiper_device: viiper_client::Device,
     },
     DeviceConnected {
-        device_id: u32,
+        device_id: u64,
     },
     DeviceRumble {
-        device_id: u32,
+        device_id: u64,
         l: u8,
         r: u8,
     },
 
     //
     ErrorCreateDevice {
-        device_id: u32,
+        device_id: u64,
     },
     ErrorConnectDevice {
-        device_id: u32,
+        device_id: u64,
     },
 }
 
 pub(super) struct ViiperBridge {
     client: Option<Arc<AsyncViiperClient>>,
     bus_id: Arc<tokio::sync::Mutex<Option<u32>>>,
-    stream_senders: Arc<Mutex<HashMap<u32, mpsc::UnboundedSender<StreamCommand>>>>,
+    stream_senders: Arc<Mutex<HashMap<u64, mpsc::UnboundedSender<StreamCommand>>>>,
     sdl_waker: Arc<Mutex<Option<EventSender>>>,
     async_handle: tokio::runtime::Handle,
 }
@@ -254,12 +254,12 @@ impl ViiperBridge {
         Ok(response.bus_id)
     }
 
-    pub fn remove_device(&mut self, which: u32) {
+    pub fn remove_device(&mut self, device_id: u64) {
         if let Ok(mut senders) = self.stream_senders.lock() {
-            if senders.remove(&which).is_some() {
-                info!("Disconnected VIIPER device with ID {}", which);
+            if senders.remove(&device_id).is_some() {
+                info!("Disconnected VIIPER device with ID {}", device_id);
             } else {
-                warn!("No VIIPER device to disconnect found with ID {}", which);
+                warn!("No VIIPER device to disconnect found with ID {}", device_id);
             }
         }
     }

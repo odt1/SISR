@@ -1,7 +1,4 @@
-use std::{
-    sync::{Arc, Mutex},
-    thread,
-};
+use std::sync::{Arc, Mutex};
 
 use crate::app::{
     App,
@@ -13,7 +10,7 @@ use sdl3::{
     event::{Event, EventSender},
     gamepad::Gamepad,
 };
-use sdl3::{joystick::Joystick, sys::events};
+use sdl3::sys::events;
 use tracing::{Level, debug, error, span, trace, warn};
 use winit::event_loop::EventLoopProxy;
 

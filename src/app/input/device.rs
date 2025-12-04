@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{collections::HashSet, fmt::Debug};
 
 use viiper_client::devices::xbox360;
 
@@ -28,7 +28,8 @@ impl Debug for SDLDevice {
 
 #[derive(Debug)]
 pub struct Device {
-    pub id: u32,
+    pub id: u64,               // internal device_id
+    pub sdl_ids: HashSet<u32>, // set of SDL instance IDs associated with this device
     pub steam_handle: u64,
     pub state: DeviceState,
     pub viiper_type: String,
@@ -41,6 +42,7 @@ impl Default for Device {
     fn default() -> Self {
         Self {
             id: 0,
+            sdl_ids: HashSet::new(),
             steam_handle: 0,
             state: DeviceState::default(),
             viiper_type: "xbox360".to_string(),

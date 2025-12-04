@@ -1,5 +1,3 @@
-use std::thread;
-
 use sdl3::event::Event;
 use tracing::{debug, error, info, trace, warn};
 
@@ -55,12 +53,13 @@ impl EventHandler {
             return;
         };
 
-        match guard.devices.iter_mut().find(|d| d.id == *which) {
-            Some(existing_device) => {
+        if let Some(&device_id) = self.sdl_id_to_device.get(which) {
+            if let Some(existing_device) = guard.devices.iter_mut().find(|d| d.id == device_id) {
                 existing_device.sdl_device_infos.push(sdl_device_info);
                 debug!(
-                    "Added extra SDL {} device count for {}; Number of SDL devices {}",
+                    "Added extra SDL {} for device {}; SDL ID {}; Total SDL devices {}",
                     if is_joystick { "Joystick" } else { "Gamepad" },
+                    device_id,
                     which,
                     existing_device.sdl_device_infos.len()
                 );
@@ -71,16 +70,20 @@ impl EventHandler {
                     *which,
                 );
             }
-            None => {
-                handle_new_device(
-                    &mut self.viiper,
-                    &mut guard,
-                    *which,
-                    steam_handle,
-                    is_joystick,
-                    sdl_device_info,
-                );
-            }
+        } else {
+            let device_id = self.next_device_id;
+            self.next_device_id += 1;
+            self.sdl_id_to_device.insert(*which, device_id);
+
+            handle_new_device(
+                &mut self.viiper,
+                &mut guard,
+                device_id,
+                *which,
+                steam_handle,
+                is_joystick,
+                sdl_device_info,
+            );
         }
     }
     pub fn on_pad_removed(&mut self, event: &Event) {
@@ -108,9 +111,22 @@ impl EventHandler {
                     .state
                     .lock()
                     .map_err(|e| error!("Failed to lock state for removing device: {}", e))
-                    && let Some(device) = guard.devices.iter_mut().find(|d| d.id == *which)
                 {
                     let is_joystick = matches!(event, Event::JoyDeviceRemoved { .. });
+
+                    let Some(&device_id) = self.sdl_id_to_device.get(which) else {
+                        warn!("No device found for SDL ID {} in pad removal", which);
+                        return;
+                    };
+
+                    let Some(device) = guard.devices.iter_mut().find(|d| d.id == device_id) else {
+                        warn!(
+                            "Device {} not found in state for SDL ID {}",
+                            device_id, which
+                        );
+                        return;
+                    };
+
                     let before_len = device.sdl_device_infos.len();
 
                     if let Some(idx) = device
@@ -120,31 +136,34 @@ impl EventHandler {
                     {
                         device.sdl_device_infos.remove(idx);
                         debug!(
-                            "Removed SDL {} device info for {}; Remaining SDL devices {}",
+                            "Removed SDL {} device info for device {}; SDL ID {}; Remaining SDL devices {}",
                             if is_joystick { "Joystick" } else { "Gamepad" },
+                            device_id,
                             which,
                             device.sdl_device_infos.len()
                         );
                     } else if before_len > 0 {
                         warn!(
-                            "Could not find matching SDL {} device info to remove for {}",
+                            "Could not find matching SDL {} device info to remove for device {}",
                             if is_joystick { "Joystick" } else { "Gamepad" },
-                            which
+                            device_id
                         );
                     }
 
                     if device.sdl_device_infos.is_empty() {
-                        self.viiper.remove_device(*which);
-                        guard.devices.retain(|d| d.id != *which);
-                        info!(
-                            "Removed {} device with ID {}",
-                            if matches!(event, Event::JoyDeviceRemoved { .. }) {
-                                "Joystick"
-                            } else {
-                                "Gamepad"
-                            },
-                            which
-                        );
+                        device.sdl_ids.remove(which);
+
+                        if device.sdl_ids.is_empty() {
+                            self.viiper.remove_device(device_id);
+                            self.sdl_id_to_device.remove(which);
+                            guard.devices.retain(|d| d.id != device_id);
+                            info!(
+                                "Removed device {} (last SDL {} with ID {})",
+                                device_id,
+                                if is_joystick { "Joystick" } else { "Gamepad" },
+                                which
+                            );
+                        }
                     }
                 }
             }
@@ -177,19 +196,25 @@ impl EventHandler {
                     return;
                 };
                 let steam_handle = get_gamepad_steam_handle(pad);
-                if let Some(device) = guard.devices.iter_mut().find(|d| d.id == instance_id) {
+
+                // Look up our device ID for this SDL instance ID
+                let Some(&device_id) = self.sdl_id_to_device.get(&instance_id) else {
+                    return;
+                };
+
+                if let Some(device) = guard.devices.iter_mut().find(|d| d.id == device_id) {
                     if device.steam_handle != steam_handle {
                         device.steam_handle = steam_handle;
                         info!(
-                            "Updated steam handle for device ID {} to {}",
-                            instance_id, steam_handle
+                            "Updated steam handle for device {} (SDL ID {}) to {}",
+                            device_id, instance_id, steam_handle
                         );
                     }
 
                     if device.viiper_device.is_none() {
                         info!(
                             "Connecting device {} upon steam handle update with steam handle {}",
-                            instance_id, steam_handle
+                            device_id, steam_handle
                         );
                         self.viiper.create_device(device);
                     }
@@ -223,21 +248,28 @@ impl EventHandler {
                     warn!("Failed to get 'which' from gamepad event: {:?}", event);
                     return;
                 };
+
+                // Look up our device ID for this SDL instance ID
+                let Some(&device_id) = self.sdl_id_to_device.get(&which) else {
+                    warn!("No device found for SDL ID {} in pad event", which);
+                    return;
+                };
+
                 if let Ok(mut guard) = self
                     .state
                     .lock()
                     .map_err(|e| error!("Failed to lock state for pad event: {}", e))
-                    && let Some(device) = guard.devices.iter_mut().find(|d| d.id == which)
+                    && let Some(device) = guard.devices.iter_mut().find(|d| d.id == device_id)
                 {
-                    let Some(gamepad) = self.sdl_devices[&which]
-                        .iter()
-                        .find(|d| matches!(d, SDLDevice::Gamepad(_)))
-                        .and_then(|d| match d {
-                            SDLDevice::Gamepad(p) => Some(p),
-                            _ => None,
-                        })
-                    else {
-                        warn!("No SDL gamepad found for device ID {}", which);
+                    let Some(gamepad) = self.sdl_devices.get(&which).and_then(|devs| {
+                        devs.iter()
+                            .find(|d| matches!(d, SDLDevice::Gamepad(_)))
+                            .and_then(|d| match d {
+                                SDLDevice::Gamepad(p) => Some(p),
+                                _ => None,
+                            })
+                    }) else {
+                        warn!("No SDL gamepad found for SDL ID {}", which);
                         return;
                     };
 
@@ -248,17 +280,18 @@ impl EventHandler {
                             self.viiper.create_device(device);
                             return;
                         }
-                        warn!("Device ID {} has no steam handle in pad event", which);
+                        warn!(
+                            "Device {} (SDL ID {}) has no steam handle in pad event",
+                            device_id, which
+                        );
                         return;
                     }
 
                     device.state.update_from_sdl_gamepad(gamepad);
 
                     self.viiper.update_device_state(device);
-
-                    self.request_redraw();
                 } else {
-                    warn!("No device found for ID {} in pad event", which);
+                    warn!("Device {} not found in state for pad event", device_id);
                 }
             }
         }
@@ -316,10 +349,27 @@ impl EventHandler {
             ViiperEvent::DeviceRumble { device_id, l, r } => {
                 warn!("Received rumble for device {}, l={}, r={}", device_id, l, r);
 
-                let Some(devices) = self.sdl_devices.get_mut(&device_id) else {
+                let Ok(guard) = self.state.lock() else {
+                    error!("Failed to lock state for rumble");
+                    return;
+                };
+
+                let Some(device) = guard.devices.iter().find(|d| d.id == device_id) else {
+                    warn!("Device {} not found for rumble", device_id);
+                    return;
+                };
+
+                // Get the first SDL ID associated with this device
+                let Some(&sdl_id) = device.sdl_ids.iter().next() else {
+                    warn!("Device {} has no SDL IDs for rumble", device_id);
+                    return;
+                };
+                drop(guard); // Release lock before accessing sdl_devices
+
+                let Some(devices) = self.sdl_devices.get_mut(&sdl_id) else {
                     warn!(
-                        "No SDL devices found for device ID {} in output event",
-                        device_id
+                        "No SDL devices found for SDL ID {} (device {}) in output event",
+                        sdl_id, device_id
                     );
                     return;
                 };
@@ -329,13 +379,13 @@ impl EventHandler {
                     _ => None,
                 }) else {
                     warn!(
-                        "No SDL gamepad found for device ID {} in output event",
-                        device_id
+                        "No SDL gamepad found for SDL ID {} (device {}) in output event",
+                        sdl_id, device_id
                     );
                     return;
                 };
                 if let Err(e) = gamepad.set_rumble(l as u16 * 257, r as u16 * 257, 10000) {
-                    warn!("Failed to set rumble for device ID {}: {}", device_id, e);
+                    warn!("Failed to set rumble for device {}: {}", device_id, e);
                 }
                 self.request_redraw();
             }
@@ -355,26 +405,26 @@ fn handle_existing_device_connect(
     viiper: &mut super::viiper_bridge::ViiperBridge,
     device: &mut Device,
     steam_handle: u64,
-    which: u32,
+    sdl_id: u32,
 ) {
     if device.steam_handle == 0 && steam_handle != 0 {
         device.steam_handle = steam_handle;
         info!(
-            "Updated steam handle for device ID {} to {}",
-            which, steam_handle
+            "Updated steam handle for device {} (SDL ID {}) to {}",
+            device.id, sdl_id, steam_handle
         );
 
         if device.viiper_device.is_some() {
             debug!(
                 "Device {} already has a VIIPER device; skipping creation",
-                which
+                device.id
             );
             return;
         }
 
         info!(
             "Connecting device {} upon connect with steam handle {}",
-            which, steam_handle
+            device.id, steam_handle
         );
         viiper.create_device(device);
     }
@@ -383,13 +433,18 @@ fn handle_existing_device_connect(
 fn handle_new_device(
     viiper: &mut super::viiper_bridge::ViiperBridge,
     guard: &mut std::sync::MutexGuard<'_, super::State>,
-    which: u32,
+    device_id: u64,
+    sdl_id: u32,
     steam_handle: u64,
     is_joystick: bool,
     sdl_device_info: SdlDeviceInfo,
 ) {
+    let mut sdl_ids = std::collections::HashSet::new();
+    sdl_ids.insert(sdl_id);
+
     let device = Device {
-        id: which,
+        id: device_id,
+        sdl_ids,
         steam_handle,
         state: DeviceState::default(),
         sdl_device_infos: vec![sdl_device_info],
@@ -398,16 +453,16 @@ fn handle_new_device(
     if is_joystick {
         guard.devices.push(device);
         info!(
-            "Added Joystick device with ID {}; Steam Handle: {}",
-            which, steam_handle
+            "Added Joystick device {} (SDL ID {}); Steam Handle: {}",
+            device_id, sdl_id, steam_handle
         );
         return;
     }
 
     if steam_handle != 0 {
         info!(
-            "Connecting device {} upon connect with steam handle {}",
-            which, steam_handle
+            "Connecting device {} (SDL ID {}) upon connect with steam handle {}",
+            device_id, sdl_id, steam_handle
         );
         viiper.create_device(&device);
     }

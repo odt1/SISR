@@ -20,7 +20,16 @@ impl EventHandler {
             ui.label("Connected GamePads:");
             for device in &state.devices {
                 ui.group(|ui| {
-                    ui.label(format!("Pad ID: {}", device.id));
+                    ui.label(format!("Device ID: {}", device.id));
+                    ui.label(format!(
+                        "SDL IDs: {}",
+                        device
+                            .sdl_ids
+                            .iter()
+                            .map(|id| id.to_string())
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ));
                     ui.label(format!("Steam Handle: {}", device.steam_handle));
                     ui.label(format!(
                         "SDL Device Count: {}",
