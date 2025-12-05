@@ -22,7 +22,7 @@ impl EventHandler {
             .show(ctx, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     ui.label("Connected GamePads:");
-                    for device in &state.devices {
+                    for (_, device) in state.devices.iter() {
                         ui.group(|ui| {
                             ui.label(format!("Device ID: {}", device.id));
                             ui.label(format!(
@@ -89,7 +89,7 @@ impl EventHandler {
             let busses = state
                 .devices
                 .iter()
-                .filter_map(|d| d.viiper_device.as_ref().map(|v| v.bus_id))
+                .filter_map(|(_, d)| d.viiper_device.as_ref().map(|v| v.bus_id))
                 .collect::<Vec<u32>>()
                 .iter()
                 .map(|id| id.to_string())

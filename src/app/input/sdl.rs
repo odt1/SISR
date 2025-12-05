@@ -6,7 +6,10 @@ use crate::app::{
     input::{handler::EventHandler, sdl_hints},
     window::RunnerEvent,
 };
-use sdl3::sys::events;
+use sdl3::sys::events::{
+    SDL_EVENT_GAMEPAD_STEAM_HANDLE_UPDATED, SDL_EVENT_GAMEPAD_UPDATE_COMPLETE,
+    SDL_EVENT_JOYSTICK_UPDATE_COMPLETE, SDL_Event, SDL_PollEvent, SDL_WaitEvent,
+};
 use sdl3::{
     event::{Event, EventSender},
     gamepad::Gamepad,
@@ -132,7 +135,7 @@ impl InputLoop {
             }
         };
 
-        match sdl.event() {
+        let _events = match sdl.event() {
             Ok(event_subsystem) => {
                 if let Err(e) =
                     event_subsystem.register_custom_event::<super::handler::ViiperEvent>()
@@ -148,13 +151,15 @@ impl InputLoop {
                         error!("Failed to set SDL event sender: {}", e);
                     }
                 }
+                event_subsystem
             }
             Err(e) => {
                 error!("Failed to get SDL event subsystem: {}", e);
+                return;
             }
-        }
+        };
 
-        let mut event_pump = match sdl.event_pump() {
+        let _event_pump = match sdl.event_pump() {
             Ok(pump) => pump,
             Err(e) => {
                 error!("Failed to get SDL event pump: {}", e);
@@ -175,12 +180,7 @@ impl InputLoop {
             });
         }
 
-        match self.run_loop(
-            &mut event_pump,
-            viiper_address,
-            joystick_subsystem,
-            gamepad_subsystem,
-        ) {
+        match self.run_loop(viiper_address, joystick_subsystem, gamepad_subsystem) {
             Ok(_) => {}
             Err(_) => {
                 error!("SDL loop exited with error");
@@ -193,7 +193,6 @@ impl InputLoop {
 
     fn run_loop(
         &mut self,
-        event_pump: &mut sdl3::EventPump,
         viiper_address: Option<std::net::SocketAddr>,
         joystick_subsystem: sdl3::JoystickSubsystem,
         gamepad_subsystem: sdl3::GamepadSubsystem,
@@ -210,55 +209,21 @@ impl InputLoop {
             gamepad_subsystem,
         );
         trace!("SDL loop starting");
+
+        let mut sdl_event: SDL_Event = unsafe { std::mem::zeroed() };
+
         loop {
             let mut redraw = false;
-            let meh = event_pump.wait_event();
 
-            for event in std::iter::once(meh).chain(event_pump.poll_iter()) {
-                if let Ok(mut guard) = self.somedummy.lock() {
-                    let state = &mut *guard;
-                    state.counter += 1;
-                }
-                match event {
-                    Event::Quit { .. } => {
-                        tracing::event!(parent: &span, Level::INFO, event = ?event, "Quit event received");
-                        return Ok(());
-                    }
-                    Event::JoyDeviceAdded { .. } | Event::ControllerDeviceAdded { .. } => {
-                        pad_event_handler.on_pad_added(&event);
-                        redraw = true;
-                    }
-                    Event::JoyDeviceRemoved { .. } | Event::ControllerDeviceRemoved { .. } => {
-                        pad_event_handler.on_pad_removed(&event);
-                        redraw = true;
-                    }
-                    Event::Unknown { type_, .. } => match events::SDL_EventType(type_) {
-                        events::SDL_EVENT_GAMEPAD_STEAM_HANDLE_UPDATED => {
-                            pad_event_handler.on_steam_handle_updated(&event);
-                        }
-                        events::SDL_EVENT_GAMEPAD_UPDATE_COMPLETE
-                        | events::SDL_EVENT_JOYSTICK_UPDATE_COMPLETE => {
-                            pad_event_handler.on_pad_event(&event);
-                        }
-                        _ => {
-                            tracing::event!(parent: &span, Level::TRACE, event = ?event, "SDL event");
-                        }
-                    },
-                    _ => {
-                        if event.is_user_event()
-                            && let Some(viiper_event) =
-                                event.as_user_event_type::<super::handler::ViiperEvent>()
-                        {
-                            pad_event_handler.on_viiper_event(viiper_event);
-                            continue;
-                        }
-
-                        if event.is_joy() || event.is_controller() {
-                            pad_event_handler.on_pad_event(&event);
-                        } else {
-                            tracing::event!(parent: &span, Level::TRACE, event = ?event, "SDL event");
-                        }
-                    }
+            if !unsafe { SDL_WaitEvent(&mut sdl_event) } {
+                continue;
+            }
+            if self.process_one(&mut sdl_event, &mut pad_event_handler, &span, &mut redraw)? {
+                return Ok(());
+            }
+            while unsafe { SDL_PollEvent(&mut sdl_event) } {
+                if self.process_one(&mut sdl_event, &mut pad_event_handler, &span, &mut redraw)? {
+                    return Ok(());
                 }
             }
 
@@ -266,6 +231,74 @@ impl InputLoop {
                 self.request_redraw();
             }
         }
+    }
+
+    /// Returns Ok(true) to quit, Ok(false) to continue, Err(()) on fatal error
+    fn process_one(
+        &self,
+        sdl_event: &mut SDL_Event,
+        handler: &mut EventHandler,
+        span: &tracing::span::Span,
+        redraw: &mut bool,
+    ) -> Result<bool, ()> {
+        if let Ok(mut guard) = self.somedummy.lock() {
+            let state = &mut *guard;
+            state.counter += 1;
+        }
+
+        let et = unsafe { sdl_event.r#type };
+        match sdl3::sys::events::SDL_EventType(et) {
+            SDL_EVENT_GAMEPAD_STEAM_HANDLE_UPDATED => {
+                let event = Event::from_ll(*sdl_event);
+                let which = unsafe { sdl_event.gdevice.which };
+                handler.on_steam_handle_updated(which);
+                *redraw = true;
+            }
+            SDL_EVENT_GAMEPAD_UPDATE_COMPLETE => {
+                let which = unsafe { sdl_event.gdevice.which };
+                handler.on_update_complete(which);
+                *redraw = true;
+            }
+            SDL_EVENT_JOYSTICK_UPDATE_COMPLETE => {
+                let which = unsafe { sdl_event.jdevice.which };
+                handler.on_update_complete(which);
+                *redraw = true;
+            }
+            _ => {
+                let event = Event::from_ll(*sdl_event);
+                match event {
+                    Event::Quit { .. } => {
+                        tracing::event!(parent: span, Level::INFO, event = ?event, "Quit event received");
+                        return Ok(true);
+                    }
+                    Event::JoyDeviceAdded { .. } | Event::ControllerDeviceAdded { .. } => {
+                        handler.on_pad_added(&event);
+                        *redraw = true;
+                    }
+                    Event::JoyDeviceRemoved { .. } | Event::ControllerDeviceRemoved { .. } => {
+                        handler.on_pad_removed(&event);
+                        *redraw = true;
+                    }
+                    _ => {
+                        if event.is_user_event()
+                            && let Some(viiper_event) =
+                                event.as_user_event_type::<super::handler::ViiperEvent>()
+                        {
+                            handler.on_viiper_event(viiper_event);
+                            return Ok(false);
+                        }
+
+                        if event.is_joy() || event.is_controller() {
+                            handler.on_pad_event(&event);
+                        } else {
+                            tracing::event!(parent: span, Level::TRACE, event = ?event, "SDL event");
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(false)
     }
 
     fn request_redraw(&self) {

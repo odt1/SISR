@@ -1,26 +1,32 @@
 use sdl3::event::Event;
-use tracing::{debug, error, info, trace, warn};
+use tracing::{debug, error, trace, warn};
 
-use crate::{
-    app::input::{
-        device::{Device, DeviceState, SDLDevice},
-        handler::ViiperEvent,
-        sdl::get_gamepad_steam_handle,
-        sdl_device_info::SdlDeviceInfo,
-    },
-    event_which,
-};
+use crate::app::input::{device::SDLDevice, handler::ViiperEvent};
 
 use super::EventHandler;
 
 impl EventHandler {
+    // Refresh all tracked gamepads when SDL signals UPDATE_COMPLETE (comes in as Unknown).
+    pub fn on_update_complete(&mut self, which: u32) {
+        let Some((device_id, input_state)) = self.sdl_id_to_device.get_mut(&which) else {
+            trace!("No tracked device for SDL ID {} on update complete", which);
+            return;
+        };
+        if let Some(sdl_devices) = self.sdl_devices.get(&which)
+            && let Some(gamepad) = sdl_devices.iter().find_map(|d| match d {
+                SDLDevice::Gamepad(p) => Some(p),
+                _ => None,
+            })
+        {
+            input_state.update_from_sdl_gamepad(gamepad);
+            self.viiper.update_device_state(device_id, input_state);
+        } else {
+            warn!("No tracked gamepad for SDL ID {} on update complete", which);
+        }
+    }
     pub fn on_pad_event(&mut self, event: &Event) {
         match event {
             Event::Unknown { .. } => {
-                // if nothing "outside" changed is
-                // GAMEPAD_STATE_UPDATE_COMPLETE or JOYPAD_STATE_UPDATE_COMPLETE
-                // Silently Ignore for now
-                // Would need "supertrace" log level lol
                 trace!("Unknown gamepad event: {:?}", event);
             }
             _ => {
@@ -38,68 +44,6 @@ impl EventHandler {
                 // handle all other events and just "update gamepad"
                 // instead of duplicating code for every shit"
                 trace!("GamepadHandler: Pad event: {:?}", event);
-                let Some(which) = event_which!(event) else {
-                    warn!("Failed to get 'which' from gamepad event: {:?}", event);
-                    return;
-                };
-
-                let Some((device_id, input_state)) = self.sdl_id_to_device.get_mut(&which) else {
-                    warn!("No device found for SDL ID {} in pad event", which);
-                    return;
-                };
-                // TODO: get rid of SEARCH!
-                let Some(gamepad) = self.sdl_devices.get(&which).and_then(|devs| {
-                    devs.iter()
-                        .find(|d| matches!(d, SDLDevice::Gamepad(_)))
-                        .and_then(|d| match d {
-                            SDLDevice::Gamepad(p) => Some(p),
-                            _ => None,
-                        })
-                }) else {
-                    warn!("No SDL gamepad found for SDL ID {}", which);
-                    return;
-                };
-
-                input_state.update_from_sdl_gamepad(gamepad);
-                self.viiper.update_device_state(device_id, input_state);
-                // if let Ok(mut guard) = self
-                //     .state
-                //     .lock()
-                //     .map_err(|e| error!("Failed to lock state for pad event: {}", e))
-                //     && let Some(device) = guard.devices.iter_mut().find(|d| d.id == device_id)
-                // {
-                //     let Some(gamepad) = self.sdl_devices.get(&which).and_then(|devs| {
-                //         devs.iter()
-                //             .find(|d| matches!(d, SDLDevice::Gamepad(_)))
-                //             .and_then(|d| match d {
-                //                 SDLDevice::Gamepad(p) => Some(p),
-                //                 _ => None,
-                //             })
-                //     }) else {
-                //         warn!("No SDL gamepad found for SDL ID {}", which);
-                //         return;
-                //     };
-
-                //     if device.steam_handle == 0 {
-                //         let handle = get_gamepad_steam_handle(gamepad);
-                //         if handle != 0 {
-                //             device.steam_handle = handle;
-                //             self.viiper.create_device(device);
-                //             return;
-                //         }
-                //         warn!(
-                //             "Device {} (SDL ID {}) has no steam handle in pad event",
-                //             device_id, which
-                //         );
-                //         return;
-                //     }
-
-                //     device.state.update_from_sdl_gamepad(gamepad);
-
-                //     self.viiper.update_device_state(device);
-                // } else {
-                //     warn!("Device {} not found in state for pad event", device_id);
-                // }
             }
         }
     }
@@ -114,7 +58,7 @@ impl EventHandler {
                     error!("Failed to lock state for VIIPER disconnect handling");
                     return;
                 };
-                if let Some(device) = guard.devices.iter_mut().find(|d| d.id == device_id) {
+                if let Some(device) = guard.devices.get_mut(&device_id) {
                     let had_steam_viiper = device.steam_handle != 0 && device.viiper_connected;
 
                     device.viiper_device = None;
@@ -128,7 +72,7 @@ impl EventHandler {
                         let has_any_steam_viiper = guard
                             .devices
                             .iter()
-                            .any(|d| d.steam_handle != 0 && d.viiper_connected);
+                            .any(|(_, d)| d.steam_handle != 0 && d.viiper_connected);
                         if !has_any_steam_viiper && guard.binding_enforcer.is_active() {
                             guard.binding_enforcer.deactivate();
                         }
@@ -143,7 +87,7 @@ impl EventHandler {
                     error!("Failed to lock state for VIIPER device created handling");
                     return;
                 };
-                let Some(device) = guard.devices.iter_mut().find(|d| d.id == device_id) else {
+                let Some(device) = guard.devices.get_mut(&device_id) else {
                     warn!("Received created event for unknown device ID {}", device_id);
                     return;
                 };
@@ -156,7 +100,7 @@ impl EventHandler {
                     error!("Failed to lock state for VIIPER device connected handling");
                     return;
                 };
-                let Some(device) = guard.devices.iter_mut().find(|d| d.id == device_id) else {
+                let Some(device) = guard.devices.get_mut(&device_id) else {
                     warn!(
                         "Received connected event for unknown device ID {}",
                         device_id
@@ -169,7 +113,7 @@ impl EventHandler {
                     let has_any_steam_viiper = guard
                         .devices
                         .iter()
-                        .any(|d| d.steam_handle != 0 && d.viiper_connected);
+                        .any(|(_, d)| d.steam_handle != 0 && d.viiper_connected);
                     if has_any_steam_viiper && !guard.binding_enforcer.is_active() {
                         guard.binding_enforcer.activate();
                     }
@@ -185,7 +129,7 @@ impl EventHandler {
                     return;
                 };
 
-                let Some(device) = guard.devices.iter().find(|d| d.id == device_id) else {
+                let Some(device) = guard.devices.get(&device_id) else {
                     warn!("Device {} not found for rumble", device_id);
                     return;
                 };

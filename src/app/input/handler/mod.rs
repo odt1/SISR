@@ -37,7 +37,7 @@ pub struct EventHandler {
 }
 
 pub(super) struct State {
-    devices: Vec<Device>,
+    devices: HashMap<u64, Device>,
     viiper_address: Option<SocketAddr>,
     binding_enforcer: BindingEnforcer,
 }
@@ -53,7 +53,7 @@ impl EventHandler {
         sdl_gamepad: sdl3::GamepadSubsystem,
     ) -> Self {
         let state = Arc::new(Mutex::new(State {
-            devices: Vec::new(),
+            devices: HashMap::new(),
             viiper_address,
             binding_enforcer: BindingEnforcer::new(),
         }));

@@ -106,12 +106,12 @@ impl DeviceState {
             b |= xbox360::BUTTON_D_PAD_RIGHT as u32;
         }
 
-        let lt = gp.axis(sdl3::gamepad::Axis::TriggerLeft).max(0);
-        let rt = gp.axis(sdl3::gamepad::Axis::TriggerRight).max(0);
+        let lt = gp.axis(sdl3::gamepad::Axis::TriggerLeft);
+        let rt = gp.axis(sdl3::gamepad::Axis::TriggerRight);
 
         self.input.buttons = b;
-        self.input.lt = ((lt as i32 * 255) / 32767) as u8;
-        self.input.rt = ((rt as i32 * 255) / 32767) as u8;
+        self.input.lt = ((lt.max(0) as i32 * 255) / 32767).clamp(0, 255) as u8;
+        self.input.rt = ((rt.max(0) as i32 * 255) / 32767).clamp(0, 255) as u8;
 
         // Invert Y axes to match XInput convention
         // XInput: Negative values signify down or to the left. Positive values signify up or to the right.
