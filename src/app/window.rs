@@ -6,7 +6,7 @@ use egui::Context;
 use egui_wgpu::Renderer as EguiRenderer;
 use egui_wgpu::ScreenDescriptor;
 use egui_winit::State as EguiWinitState;
-use tracing::{error, trace};
+use tracing::{debug, error, trace};
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
@@ -22,6 +22,8 @@ use crate::gfx::Gfx;
 pub enum RunnerEvent {
     Quit(),
     Redraw(),
+    ShowWindow(),
+    HideWindow(),
 }
 
 pub struct WindowRunner {
@@ -77,7 +79,7 @@ impl WindowRunner {
         }
     }
 
-    pub fn run(&mut self) -> ExitCode {
+    pub fn run(&mut self, initially_visible: bool) -> ExitCode {
         let event_loop = EventLoop::<RunnerEvent>::with_user_event()
             .build()
             .expect("Failed to create event loop");
@@ -85,7 +87,11 @@ impl WindowRunner {
 
         match self.winit_waker.lock() {
             Ok(mut guard) => {
-                *guard = Some(event_loop.create_proxy());
+                let proxy = event_loop.create_proxy();
+                if !initially_visible {
+                    _ = proxy.send_event(RunnerEvent::HideWindow());
+                }
+                *guard = Some(proxy);
             }
             Err(e) => {
                 error!("Failed to set winit event loop proxy: {}", e);
@@ -257,6 +263,8 @@ impl ApplicationHandler<RunnerEvent> for WindowRunner {
                 .create_window(window_attrs)
                 .expect("Failed to create window"),
         );
+
+        window.set_visible(true);
         let gfx = pollster::block_on(Gfx::new(window.clone()));
 
         self.egui_winit = Some(EguiWinitState::new(
@@ -286,6 +294,25 @@ impl ApplicationHandler<RunnerEvent> for WindowRunner {
             RunnerEvent::Redraw() => {
                 if let Some(window) = &self.window {
                     window.request_redraw();
+                }
+            }
+            RunnerEvent::ShowWindow() => {
+                trace!("ShowWindow event received");
+                if let Some(window) = &self.window {
+                    debug!("showing window");
+                    window.set_visible(true);
+                    window.focus_window();
+                    window.request_redraw();
+                } else {
+                    trace!("Window is None, cannot show");
+                }
+            }
+            RunnerEvent::HideWindow() => {
+                if let Some(window) = &self.window {
+                    debug!("hiding window");
+                    window.set_visible(false);
+                } else {
+                    trace!("Window is None, cannot hide");
                 }
             }
         }

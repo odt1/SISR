@@ -51,11 +51,19 @@ impl App {
             async_rt.handle().clone(),
         ))));
 
+        let should_create_window = self.cfg.window.create.unwrap_or(true);
+        let window_visible = Arc::new(Mutex::new(should_create_window));
+
         let tray_handle = if self.cfg.tray.unwrap_or(true) {
             let sdl_waker_for_tray = self.sdl_waker.clone();
             let winit_waker_for_tray = self.winit_waker.clone();
+            let window_visible_for_tray = window_visible.clone();
             Some(thread::spawn(move || {
-                tray::run(sdl_waker_for_tray, winit_waker_for_tray);
+                tray::run(
+                    sdl_waker_for_tray,
+                    winit_waker_for_tray,
+                    window_visible_for_tray,
+                );
             }))
         } else {
             None
@@ -88,7 +96,6 @@ impl App {
             }
         };
         let sdl_handle: thread::JoinHandle<()>;
-        let should_create_window = self.cfg.window.create.unwrap_or(true);
         if should_create_window {
             match self.gui_dispatcher.lock() {
                 Ok(mut guard) => {
@@ -103,7 +110,7 @@ impl App {
 
             let mut window_runner =
                 WindowRunner::new(self.winit_waker.clone(), self.gui_dispatcher.clone());
-            exit_code = window_runner.run();
+            exit_code = window_runner.run(should_create_window);
             Self::shutdown(Some(&self.sdl_waker), Some(&self.winit_waker));
         } else {
             info!("Running without window. Press Ctrl+C to exit.");
