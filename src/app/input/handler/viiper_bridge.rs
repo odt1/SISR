@@ -88,8 +88,8 @@ impl ViiperBridge {
 
         self.async_handle.spawn(async move {
             let bus_id = {
-                let current = *bus_id.lock().await;
-                let id = match Self::ensure_bus(&client, current).await {
+                let mut bus_guard = bus_id.lock().await;
+                let id = match Self::ensure_bus(&client, *bus_guard).await {
                     Ok(id) => id,
                     Err(e) => {
                         error!("Failed to ensure VIIPER bus exists: {}", e);
@@ -100,7 +100,7 @@ impl ViiperBridge {
                     }
                 };
 
-                *bus_id.lock().await = Some(id);
+                *bus_guard = Some(id);
                 id
             };
 
