@@ -95,27 +95,20 @@ impl App {
                 input_loop.run(viiper_address);
             }
         };
-        let sdl_handle: thread::JoinHandle<()>;
-        if should_create_window {
-            match self.gui_dispatcher.lock() {
-                Ok(mut guard) => {
-                    *guard = Some(GuiDispatcher::new(self.winit_waker.clone()));
-                }
-                Err(e) => {
-                    error!("Failed to initialize GUI dispatcher: {}", e);
-                }
+        let sdl_handle = thread::spawn(create_sdl_handle);
+        match self.gui_dispatcher.lock() {
+            Ok(mut guard) => {
+                *guard = Some(GuiDispatcher::new(self.winit_waker.clone()));
             }
-
-            sdl_handle = thread::spawn(create_sdl_handle);
-
-            let mut window_runner =
-                WindowRunner::new(self.winit_waker.clone(), self.gui_dispatcher.clone());
-            exit_code = window_runner.run(should_create_window);
-            Self::shutdown(Some(&self.sdl_waker), Some(&self.winit_waker));
-        } else {
-            info!("Running without window. Press Ctrl+C to exit.");
-            sdl_handle = thread::spawn(create_sdl_handle);
+            Err(e) => {
+                error!("Failed to initialize GUI dispatcher: {}", e);
+            }
         }
+
+        let mut window_runner =
+            WindowRunner::new(self.winit_waker.clone(), self.gui_dispatcher.clone());
+        exit_code = window_runner.run(should_create_window);
+        Self::shutdown(Some(&self.sdl_waker), Some(&self.winit_waker));
 
         if let Err(e) = sdl_handle.join() {
             error!("SDL thread panicked: {:?}", e);

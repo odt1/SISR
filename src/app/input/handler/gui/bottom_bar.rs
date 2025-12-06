@@ -1,5 +1,6 @@
 use egui::text::{LayoutJob, TextFormat};
 use egui::{Align, Align2, Area, FontId, TextStyle, Vec2};
+use tracing::trace;
 
 use crate::app::gui::stacked_button::stacked_button;
 use crate::app::input::handler::State;
@@ -76,6 +77,7 @@ impl BottomBar {
                         let response = stacked_button(ui, job, item.open, Vec2::new(24.0, 12.0));
                         if response.clicked() {
                             item.open = !item.open;
+                            trace!("Toggled bottom bar item '{}': {}", item.title, item.open);
                         }
                     }
                 });
