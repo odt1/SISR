@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync};
+use std::{env, path::PathBuf, sync};
 
 use clap::Parser;
 use figment::{
@@ -6,6 +6,7 @@ use figment::{
     providers::{Format, Json, Serialized, Toml, Yaml},
 };
 use serde::{Deserialize, Serialize};
+use tracing::debug;
 
 pub static CONFIG: sync::OnceLock<Config> = sync::OnceLock::new();
 
@@ -148,9 +149,54 @@ impl Default for Config {
 }
 
 impl Config {
+    fn config_candidate_paths() -> Vec<PathBuf> {
+        let mut paths = Vec::new();
+        let config_names = ["SISR", "config"];
+        let extensions = ["toml", "yaml", "yml", "json"];
+
+        if let Some(config_dir) = directories::ProjectDirs::from("", "", "SISR") {
+            let config_path = config_dir.config_dir();
+            for name in &config_names {
+                for ext in &extensions {
+                    paths.push(config_path.join(format!("{}.{}", name, ext)));
+                }
+            }
+        }
+
+        if let Ok(exe_path) = env::current_exe()
+            && let Some(exe_dir) = exe_path.parent()
+        {
+            for name in &config_names {
+                for ext in &extensions {
+                    paths.push(exe_dir.join(format!("{}.{}", name, ext)));
+                }
+            }
+        } else {
+            debug!("Failed to get current executable path for config search");
+        }
+
+        paths
+    }
+
     pub fn parse() -> Self {
         let cli_args = <Self as Parser>::parse();
-        match Figment::from(Serialized::defaults(Config::default()))
+
+        let candidates = Self::config_candidate_paths();
+        debug!("Config candidate paths: {:?}", candidates);
+
+        let mut cfg = Figment::from(Serialized::defaults(Config::default()));
+        for path in candidates {
+            cfg = cfg.merge({
+                match path.extension().and_then(|s| s.to_str()) {
+                    Some("toml") => Figment::from(Toml::file(&path)),
+                    Some("yaml" | "yml") => Figment::from(Yaml::file(&path)),
+                    Some("json") => Figment::from(Json::file(&path)),
+                    _ => Figment::from(Toml::file(&path)),
+                }
+            });
+        }
+
+        match cfg
             .merge({
                 match &cli_args.config_file_path {
                     None => Figment::new(),
