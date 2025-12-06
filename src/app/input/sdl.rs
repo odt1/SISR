@@ -271,8 +271,16 @@ impl InputLoop {
                                 super::handler::HandlerEvent::ViiperEvent(ve) => {
                                     handler.on_viiper_event(ve);
                                 }
-                                super::handler::HandlerEvent::IgnoreDeviceEvent { device_id } => {
+                                super::handler::HandlerEvent::IgnoreDevice { device_id } => {
                                     handler.ignore_device(device_id);
+                                }
+                                super::handler::HandlerEvent::ConnectViiperDevice { device_id } => {
+                                    handler.connect_viiper_device(device_id);
+                                }
+                                super::handler::HandlerEvent::DisconnectViiperDevice {
+                                    device_id,
+                                } => {
+                                    handler.disconnect_viiper_device(device_id);
                                 }
                             }
                             return Ok(false);

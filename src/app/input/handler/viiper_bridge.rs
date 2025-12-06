@@ -284,7 +284,7 @@ impl ViiperBridge {
     fn push_event(sdl_waker: &Arc<Mutex<Option<EventSender>>>, event: ViiperEvent) {
         if let Ok(guard) = sdl_waker.lock()
             && let Some(sender) = &*guard
-            && let Err(e) = sender.push_custom_event(event)
+            && let Err(e) = sender.push_custom_event(super::HandlerEvent::ViiperEvent(event))
         {
             error!("Failed to push VIIPER event: {}", e);
         }

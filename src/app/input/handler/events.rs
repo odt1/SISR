@@ -2,5 +2,7 @@ use crate::app::input::handler::ViiperEvent;
 
 pub enum HandlerEvent {
     ViiperEvent(ViiperEvent),
-    IgnoreDeviceEvent { device_id: u64 },
+    IgnoreDevice { device_id: u64 },
+    ConnectViiperDevice { device_id: u64 },
+    DisconnectViiperDevice { device_id: u64 },
 }

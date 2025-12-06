@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use egui::{CollapsingHeader, Id, RichText, Vec2};
 use sdl3::event::EventSender;
 
-use crate::app::gui::dialogs::{self, Dialog, push_dialog};
+use crate::app::gui::dialogs::{ Dialog, push_dialog};
 use crate::app::input::handler::{HandlerEvent, State};
 use crate::app::input::sdl_device_info::SdlValue;
 
@@ -37,9 +37,6 @@ pub fn draw(state: &mut State, sdl_waker: Arc<Mutex<Option<EventSender>>>,  ctx:
                         ui.heading(RichText::new(
                             title_string.clone(),
                         ));
-                        if device.viiper_connected {
-                            ui.label(RichText::new("🐍").strong());
-                        }
                         if ui.button("Ignore").clicked() {
                             let device_id = device.id;
                             _ = push_dialog(Dialog::new_yes_no(
@@ -48,7 +45,7 @@ pub fn draw(state: &mut State, sdl_waker: Arc<Mutex<Option<EventSender>>>,  ctx:
                                  move ||{
                                     waker_clone.lock().expect("sdl_loop does not exist").as_ref().map(|waker| {
                                         waker.push_custom_event(
-                                            HandlerEvent::IgnoreDeviceEvent {
+                                            HandlerEvent::IgnoreDevice {
                                                 device_id
                                             })
                                     });
@@ -94,10 +91,28 @@ pub fn draw(state: &mut State, sdl_waker: Arc<Mutex<Option<EventSender>>>,  ctx:
                             });
                         });
                         ui.separator();
+
+                        let viiper_connect_ui = |ui: &mut egui::Ui| {
+                                ui.add_enabled_ui(device.steam_handle > 0, |ui|{
+                                    if ui.button(if device.viiper_connected { "Disconnect" } else { "Connect" }).clicked() {
+                                        let device_id = device.id;
+                                        sdl_waker.clone().lock().expect("sdl_loop does not exist").as_ref().map(|waker| {
+                                            waker.push_custom_event(
+                                                if device.viiper_connected {
+                                                    HandlerEvent::DisconnectViiperDevice { device_id }
+                                                } else {
+                                                    HandlerEvent::ConnectViiperDevice { device_id }
+                                                }
+                                            )
+                                        });
+                                    }
+                                });
+                        };
+
                         CollapsingHeader::new(if device.viiper_connected {
-                            "🐍 VIIPER Device 🔗"
+                            "🐍 VIIPER Device 🌐"
                         } else {
-                            "🐍 VIIPER Device ⛓️‍💥"
+                            "🐍 VIIPER Device 🚫"
                         })
                         .id_salt(format!("viiperdev{}", device.id))
                         .show(ui, |ui| match &device.viiper_device {
@@ -109,6 +124,9 @@ pub fn draw(state: &mut State, sdl_waker: Arc<Mutex<Option<EventSender>>>,  ctx:
                                             .weak(),
                                     );
                                 });
+
+                                viiper_connect_ui(ui);
+
                                 ui.horizontal_wrapped(|ui| {
                                     ui.label(RichText::new("Bus ID:").strong());
                                     ui.label(
@@ -134,6 +152,7 @@ pub fn draw(state: &mut State, sdl_waker: Arc<Mutex<Option<EventSender>>>,  ctx:
                             }
                             None => {
                                 ui.label("Not connected");
+                                viiper_connect_ui(ui);
                             }
                         });
                     });
