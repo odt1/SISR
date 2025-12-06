@@ -240,12 +240,10 @@ impl InputLoop {
             SDL_EVENT_GAMEPAD_UPDATE_COMPLETE => {
                 let which = unsafe { sdl_event.gdevice.which };
                 handler.on_update_complete(which);
-                *redraw = true;
             }
             SDL_EVENT_JOYSTICK_UPDATE_COMPLETE => {
                 let which = unsafe { sdl_event.jdevice.which };
                 handler.on_update_complete(which);
-                *redraw = true;
             }
             _ => {
                 let event = Event::from_ll(*sdl_event);
