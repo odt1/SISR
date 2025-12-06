@@ -17,6 +17,7 @@ use winit::platform::windows::WindowAttributesExtWindows;
 
 use crate::app::gui::dispatcher::GuiDispatcher;
 use crate::app::gui::{dark_theme, light_theme};
+use crate::config;
 use crate::gfx::Gfx;
 
 pub enum RunnerEvent {
@@ -79,7 +80,7 @@ impl WindowRunner {
         }
     }
 
-    pub fn run(&mut self, initially_visible: bool) -> ExitCode {
+    pub fn run(&mut self) -> ExitCode {
         let event_loop = EventLoop::<RunnerEvent>::with_user_event()
             .build()
             .expect("Failed to create event loop");
@@ -88,9 +89,6 @@ impl WindowRunner {
         match self.winit_waker.lock() {
             Ok(mut guard) => {
                 let proxy = event_loop.create_proxy();
-                if !initially_visible {
-                    _ = proxy.send_event(RunnerEvent::HideWindow());
-                }
                 *guard = Some(proxy);
             }
             Err(e) => {
@@ -244,11 +242,19 @@ impl ApplicationHandler<RunnerEvent> for WindowRunner {
         if self.window.is_some() {
             return;
         }
+        let initially_visible = config::CONFIG
+            .get()
+            .cloned()
+            .expect("Config not set")
+            .window
+            .create
+            .unwrap_or(false);
 
         let mut window_attrs = WindowAttributes::default()
             .with_title("SISR")
             .with_inner_size(winit::dpi::LogicalSize::new(1280.0, 720.0))
-            .with_transparent(true);
+            .with_transparent(true)
+            .with_visible(initially_visible);
 
         #[cfg(windows)]
         {

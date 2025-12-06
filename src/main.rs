@@ -17,6 +17,7 @@ fn main() -> ExitCode {
     sisr::app::steam_utils::install_cleanup_handlers();
 
     let config = sisr::config::Config::parse();
+    sisr::config::CONFIG.set(config.clone()).unwrap();
 
     logging::set_level(config.log.level.as_ref().unwrap().parse().unwrap());
 
@@ -44,7 +45,7 @@ fn main() -> ExitCode {
         }
     }
 
-    let mut app = sisr::app::App::new(config);
+    let mut app = sisr::app::App::new();
     let result = app.run();
 
     #[cfg(windows)]

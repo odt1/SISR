@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync};
 
 use clap::Parser;
 use figment::{
@@ -7,7 +7,9 @@ use figment::{
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Parser, Debug, Serialize, Deserialize)]
+pub static CONFIG: sync::OnceLock<Config> = sync::OnceLock::new();
+
+#[derive(Parser, Debug, Serialize, Deserialize, Clone)]
 #[command(version, about, long_about = None)]
 pub struct Config {
     #[serde(skip)]
@@ -62,7 +64,7 @@ pub struct Config {
     pub debug: u8,
 }
 
-#[derive(Parser, Debug, Serialize, Deserialize)]
+#[derive(Parser, Debug, Serialize, Deserialize, Clone)]
 pub struct WindowOpts {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(
@@ -88,7 +90,7 @@ pub struct WindowOpts {
     pub fullscreen: Option<bool>,
 }
 
-#[derive(Parser, Debug, Serialize, Deserialize)]
+#[derive(Parser, Debug, Serialize, Deserialize, Clone)]
 pub struct LogOpts {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(
@@ -104,7 +106,7 @@ pub struct LogOpts {
     pub log_file: Option<LogFile>,
 }
 
-#[derive(Parser, Debug, Serialize, Deserialize)]
+#[derive(Parser, Debug, Serialize, Deserialize, Clone)]
 pub struct LogFile {
     #[serde()]
     #[arg(

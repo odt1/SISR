@@ -22,9 +22,9 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(cfg: config::Config) -> Self {
+    pub fn new() -> Self {
         Self {
-            cfg,
+            cfg: config::CONFIG.get().cloned().expect("Config not set"),
             sdl_waker: Arc::new(Mutex::new(None)),
             winit_waker: Arc::new(Mutex::new(None)),
             gui_dispatcher: Arc::new(Mutex::new(None)),
@@ -78,8 +78,6 @@ impl App {
             warn!("Failed to set Ctrl+C handler: {}", e);
         }
 
-        let mut exit_code = ExitCode::SUCCESS;
-
         let viiper_address = self.cfg.viiper_address.as_ref().and_then(|addr_str| {
             addr_str
                 .to_socket_addrs()
@@ -107,7 +105,7 @@ impl App {
 
         let mut window_runner =
             WindowRunner::new(self.winit_waker.clone(), self.gui_dispatcher.clone());
-        exit_code = window_runner.run(should_create_window);
+        let mut exit_code = window_runner.run();
         Self::shutdown(Some(&self.sdl_waker), Some(&self.winit_waker));
 
         if let Err(e) = sdl_handle.join() {
@@ -144,5 +142,11 @@ impl App {
             _ = proxy.send_event(RunnerEvent::Quit());
         }
         tray::shutdown();
+    }
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
     }
 }
