@@ -163,11 +163,13 @@ jobs:
             - name: Create archive
               shell: bash
               run: |
+                  CLEAN_NAME=$(echo "${{ matrix.target.name }}" | sed 's/-unknown-/-/g' | sed 's/-pc-/-/g')
+
                   cd dist
                   if [ "${{ matrix.target.os }}" = "windows-latest" ]; then
-                    7z a -tzip "SISR-${{ matrix.target.name }}${{ inputs.artifact_suffix }}.zip" ./package/*
+                    7z a -tzip "SISR-${CLEAN_NAME}${{ inputs.artifact_suffix }}.zip" ./package/*
                   else
-                    tar -czf "SISR-${{ matrix.target.name }}${{ inputs.artifact_suffix }}.tar.gz" -C package .
+                    tar -czf "SISR-${CLEAN_NAME}${{ inputs.artifact_suffix }}.tar.gz" -C package .
                   fi
                   cd ..
 
@@ -175,7 +177,7 @@ jobs:
               if: ${{ inputs.upload_artifacts }}
               uses: actions/upload-artifact@v4
               with:
-                  name: SISR-${{ matrix.target.name }}${{ inputs.artifact_suffix }}
+                  name: SISR-${CLEAN_NAME}${{ inputs.artifact_suffix }}
                   path: |
                       dist/*.zip
                       dist/*.tar.gz
