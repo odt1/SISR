@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use egui::text::{LayoutJob, TextFormat};
 use egui::{Align, Align2, Area, FontId, TextStyle, Vec2};
 use sdl3::event::EventSender;
+use serde::{Deserialize, Serialize};
 use tracing::trace;
 
 use crate::app::gui::stacked_button::stacked_button;
@@ -20,6 +21,11 @@ pub struct BarItem {
 
 pub struct BottomBar {
     pub items: Vec<BarItem>,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+struct BottomBarState {
+    open_items: Vec<String>,
 }
 
 impl BottomBar {
@@ -48,12 +54,38 @@ impl BottomBar {
         }
     }
 
+    fn load_state(&mut self, ctx: &egui::Context) {
+        let state =
+            ctx.data_mut(|d| d.get_persisted::<BottomBarState>(egui::Id::new("bottom_bar_state")));
+        if let Some(state) = state {
+            for item in &mut self.items {
+                item.open = state.open_items.contains(&item.title.to_string());
+            }
+        }
+    }
+
+    fn save_state(&self, ctx: &egui::Context) {
+        let state = BottomBarState {
+            open_items: self
+                .items
+                .iter()
+                .filter(|i| i.open)
+                .map(|i| i.title.to_string())
+                .collect(),
+        };
+        ctx.data_mut(|d| d.insert_persisted(egui::Id::new("bottom_bar_state"), state));
+    }
+
     pub fn draw(
         &mut self,
         state: &mut State,
         sdl_waker: Arc<Mutex<Option<EventSender>>>,
         ctx: &egui::Context,
     ) {
+        self.load_state(ctx);
+
+        let mut state_changed = false;
+
         Area::new("input_gui_bottom_bar".into())
             .anchor(Align2::CENTER_BOTTOM, Vec2::new(0.0, -16.0))
             .show(ctx, |ui| {
@@ -88,6 +120,7 @@ impl BottomBar {
                         let response = stacked_button(ui, job, item.open, Vec2::new(24.0, 12.0));
                         if response.clicked() {
                             item.open = !item.open;
+                            state_changed = true;
                             trace!("Toggled bottom bar item '{}': {}", item.title, item.open);
                         }
                     }
@@ -98,6 +131,10 @@ impl BottomBar {
             if item.open {
                 (item.render)(state, sdl_waker.clone(), ctx, &mut item.open);
             }
+        }
+
+        if state_changed {
+            self.save_state(ctx);
         }
     }
 }
