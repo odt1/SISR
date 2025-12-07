@@ -3,6 +3,7 @@ use winit::event_loop::EventLoopProxy;
 
 use crate::app::steam_utils::cef_ws::handlers;
 use crate::app::steam_utils::cef_ws::messages::CefMessage;
+use crate::app::steam_utils::cef_ws::response_writer::ResponseWriter;
 use crate::app::window::RunnerEvent;
 
 use super::messages::WsResponse;
@@ -23,13 +24,23 @@ impl Handler {
         }
     }
     pub fn handle(&self, message: CefMessage) -> WsResponse {
+        let writer = ResponseWriter::new();
+
         match message {
             CefMessage::Ping => {
-                handlers::ping::handle(&message, &self.winit_waker, &self.sdl_waker)
+                handlers::ping::handle(&message, &self.winit_waker, &self.sdl_waker, &writer);
             }
             CefMessage::OverlayStateChanged { .. } => {
-                handlers::overlay_changed::handle(&message, &self.winit_waker, &self.sdl_waker)
+                handlers::overlay_changed::handle(
+                    &message,
+                    &self.winit_waker,
+                    &self.sdl_waker,
+                    &writer,
+                );
             }
         }
+
+        let data = writer.take_response();
+        WsResponse::success(data)
     }
 }

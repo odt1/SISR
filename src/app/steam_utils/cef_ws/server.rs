@@ -3,10 +3,13 @@ use futures_util::{SinkExt, StreamExt};
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::mpsc;
 use tokio_tungstenite::WebSocketStream;
 use tokio_tungstenite::tungstenite::Message;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, trace, warn};
 use winit::event_loop::EventLoopProxy;
+
+use serde::Serialize;
 
 use crate::app::steam_utils::cef_ws::CefMessage;
 use crate::app::window::RunnerEvent;
@@ -14,9 +17,12 @@ use crate::app::window::RunnerEvent;
 use super::handler::Handler;
 use super::messages::WsResponse;
 
+type BroadcastSender = mpsc::UnboundedSender<Message>;
+
 pub struct WebSocketServer {
     listener: TcpListener,
     port: u16,
+    connections: Arc<Mutex<Vec<BroadcastSender>>>,
 }
 
 impl WebSocketServer {
@@ -32,11 +38,38 @@ impl WebSocketServer {
 
         info!("CEF Debug WebSocket server bound to port {}", port);
 
-        Ok(Self { listener, port })
+        Ok(Self {
+            listener,
+            port,
+            connections: Arc::new(Mutex::new(Vec::new())),
+        })
     }
 
     pub fn port(&self) -> u16 {
         self.port
+    }
+
+    pub fn broadcast<T: Serialize>(&self, message: T) {
+        let json = match serde_json::to_string(&message) {
+            Ok(json) => json,
+            Err(e) => {
+                warn!("Failed to serialize broadcast message: {}", e);
+                return;
+            }
+        };
+
+        if let Ok(mut connections) = self.connections.lock() {
+            if connections.is_empty() {
+                trace!("No active WebSocket connections to broadcast to");
+                return;
+            }
+
+            debug!("Broadcasting message to {} connections", connections.len());
+
+            connections.retain(|sender| sender.send(Message::Text(json.clone().into())).is_ok());
+        } else {
+            warn!("Failed to acquire lock to broadcast message");
+        }
     }
 
     pub fn run(
@@ -45,19 +78,32 @@ impl WebSocketServer {
         winit_waker: Arc<Mutex<Option<EventLoopProxy<RunnerEvent>>>>,
         sdl_waker: Arc<Mutex<Option<sdl3::event::EventSender>>>,
     ) {
+        let server = Arc::new(self);
+        let connections = server.connections.clone();
+        let port = server.port;
+
+        super::broadcast::set_server(server.clone());
+
         handle.spawn(async move {
-            info!("CEF Debug WebSocket server listening on port {}", self.port);
+            info!("CEF Debug WebSocket server listening on port {}", port);
 
             loop {
-                match self.listener.accept().await {
+                match server.listener.accept().await {
                     Ok((stream, addr)) => {
                         debug!("New CEF Debug WebSocket connection from: {}", addr);
                         let winit_waker = winit_waker.clone();
                         let sdl_waker = sdl_waker.clone();
+                        let connections = connections.clone();
 
                         tokio::spawn(async move {
-                            if let Err(e) =
-                                Self::handle_connection(stream, addr, winit_waker, sdl_waker).await
+                            if let Err(e) = Self::handle_connection(
+                                stream,
+                                addr,
+                                winit_waker,
+                                sdl_waker,
+                                connections,
+                            )
+                            .await
                             {
                                 error!(
                                     "Error handling CEF Debug WebSocket connection from {}: {}",
@@ -79,6 +125,7 @@ impl WebSocketServer {
         addr: SocketAddr,
         winit_waker: Arc<Mutex<Option<EventLoopProxy<RunnerEvent>>>>,
         sdl_waker: Arc<Mutex<Option<sdl3::event::EventSender>>>,
+        connections: Arc<Mutex<Vec<BroadcastSender>>>,
     ) -> Result<()> {
         let ws_stream = tokio_tungstenite::accept_async(stream)
             .await
@@ -86,57 +133,81 @@ impl WebSocketServer {
 
         info!("CEF Debug WebSocket connection established with {}", addr);
 
-        Self::process_messages(ws_stream, addr, winit_waker, sdl_waker).await
+        Self::process_messages(ws_stream, addr, winit_waker, sdl_waker, connections).await
     }
 
     async fn process_messages(
-        mut ws_stream: WebSocketStream<TcpStream>,
+        ws_stream: WebSocketStream<TcpStream>,
         addr: SocketAddr,
         winit_waker: Arc<Mutex<Option<EventLoopProxy<RunnerEvent>>>>,
         sdl_waker: Arc<Mutex<Option<sdl3::event::EventSender>>>,
+        connections: Arc<Mutex<Vec<BroadcastSender>>>,
     ) -> Result<()> {
         let handler = Handler::new(winit_waker, sdl_waker);
 
-        while let Some(msg) = ws_stream.next().await {
-            match msg {
-                Ok(Message::Text(text)) => {
-                    debug!("CEF Debug WebSocket received from {}: {}", addr, text);
+        let (broadcast_tx, mut broadcast_rx) = mpsc::unbounded_channel();
 
-                    let response = match serde_json::from_str::<CefMessage>(&text) {
-                        Ok(message) => handler.handle(message),
-                        Err(e) => {
-                            warn!(
-                                "Failed to parse CEF Debug WebSocket message from {}: {}",
-                                addr, e
-                            );
-                            WsResponse::error(format!("Invalid message: {}", e))
+        if let Ok(mut conns) = connections.lock() {
+            conns.push(broadcast_tx);
+            debug!("Registered WebSocket connection. Total: {}", conns.len());
+        }
+
+        let (mut ws_sender, mut ws_receiver) = ws_stream.split();
+
+        loop {
+            tokio::select! {
+                msg = ws_receiver.next() => {
+                    match msg {
+                        Some(Ok(Message::Text(text))) => {
+                            debug!("CEF Debug WebSocket received from {}: {}", addr, text);
+
+                            let response = match serde_json::from_str::<CefMessage>(&text) {
+                                Ok(message) => handler.handle(message),
+                                Err(e) => {
+                                    warn!(
+                                        "Failed to parse CEF Debug WebSocket message from {}: {}",
+                                        addr, e
+                                    );
+                                    WsResponse::error(format!("Invalid message: {}", e))
+                                }
+                            };
+
+                            let response_text = serde_json::to_string(&response)
+                                .context("Failed to serialize WebSocket response")?;
+
+                            ws_sender
+                                .send(Message::Text(response_text.into()))
+                                .await
+                                .context("Failed to send WebSocket response")?;
                         }
-                    };
-
-                    let response_text = serde_json::to_string(&response)
-                        .context("Failed to serialize WebSocket response")?;
-
-                    ws_stream
-                        .send(Message::Text(response_text.into()))
-                        .await
-                        .context("Failed to send WebSocket response")?;
+                        Some(Ok(Message::Close(_))) => {
+                            info!("CEF Debug WebSocket connection closed by client: {}", addr);
+                            break;
+                        }
+                        Some(Ok(Message::Ping(data))) => {
+                            ws_sender
+                                .send(Message::Pong(data))
+                                .await
+                                .context("Failed to send pong")?;
+                        }
+                        Some(Ok(_)) => {
+                            // Ignore other message types (Binary, Pong, Frame)
+                        }
+                        Some(Err(e)) => {
+                            error!("CEF Debug WebSocket error from {}: {}", addr, e);
+                            break;
+                        }
+                        None => {
+                            debug!("CEF Debug WebSocket stream ended for {}", addr);
+                            break;
+                        }
+                    }
                 }
-                Ok(Message::Close(_)) => {
-                    info!("CEF Debug WebSocket connection closed by client: {}", addr);
-                    break;
-                }
-                Ok(Message::Ping(data)) => {
-                    ws_stream
-                        .send(Message::Pong(data))
-                        .await
-                        .context("Failed to send pong")?;
-                }
-                Ok(_) => {
-                    // Ignore other message types (Binary, Pong, Frame)
-                }
-                Err(e) => {
-                    error!("CEF Debug WebSocket error from {}: {}", addr, e);
-                    break;
+                Some(broadcast_msg) = broadcast_rx.recv() => {
+                    if let Err(e) = ws_sender.send(broadcast_msg).await {
+                        warn!("Failed to send broadcast message to {}: {}", addr, e);
+                        break;
+                    }
                 }
             }
         }
