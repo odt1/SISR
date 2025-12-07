@@ -19,6 +19,7 @@ declare global {
     const SISR_HOST: string;
     const SteamClient: SteamClient;
     const opener: SteamWindow | null;
+    let __res: unknown;
 }
 
 // Best effort, LLM genned from copy-pasta output of chromes devtools

@@ -6,14 +6,13 @@ const main = async () => {
         overlay_opened_closed_bool: boolean,
         always_true: boolean
     ) => {
-        api.overlay(overlay_opened_closed_bool).catch(console.error);
+        api.overlayStateChanged(overlay_opened_closed_bool);
     }
     await (opener as SteamWindow).SteamClient.Overlay.RegisterForOverlayActivated(
         overlayCallback
     );
 };
 
-api.ping().then(() => {
-    console.log("Ping successful, running main...");
-    main();
-});
+api.connect().then(() => {
+    main().catch(console.error);
+}).catch(console.error);
