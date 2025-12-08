@@ -31,6 +31,26 @@ jobs:
             - name: Set up Rust
               uses: dtolnay/rust-toolchain@stable
 
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 10
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "25"
+                  cache: "pnpm"
+                  cache-dependency-path: cef_injectee/pnpm-lock.yaml
+
+            - name: Install cef_injectee dependencies
+              working-directory: cef_injectee
+              run: pnpm install
+
+            - name: Build cef_injectee
+              working-directory: cef_injectee
+              run: pnpm run build
+
             - name: Cache Rust dependencies
               uses: Swatinem/rust-cache@v2
 
@@ -97,6 +117,26 @@ jobs:
               uses: dtolnay/rust-toolchain@stable
               with:
                   targets: ${{ matrix.target.rust_target }}
+
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 10
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "25"
+                  cache: "pnpm"
+                  cache-dependency-path: cef_injectee/pnpm-lock.yaml
+
+            - name: Install cef_injectee dependencies
+              working-directory: cef_injectee
+              run: pnpm install
+
+            - name: Build cef_injectee
+              working-directory: cef_injectee
+              run: pnpm run build
 
             - name: Cache Rust dependencies
               uses: Swatinem/rust-cache@v2
