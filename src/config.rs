@@ -66,6 +66,10 @@ pub struct Config {
     #[serde(skip)]
     #[arg(short, long, action = clap::ArgAction::Count)]
     pub debug: u8,
+
+    #[serde(skip)]
+    #[arg(long)]
+    pub marker: bool,
 }
 
 #[derive(Parser, Debug, Serialize, Deserialize, Clone)]
@@ -199,6 +203,7 @@ impl Default for Config {
                 steam_path: None,
             },
             debug: 0,
+            marker: false,
         }
     }
 }

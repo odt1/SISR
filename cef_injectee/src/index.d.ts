@@ -114,6 +114,14 @@ interface SteamClientApps {
     StreamGame: (appId: number) => void;
     CancelLaunch: (appId: number) => void;
     TerminateApp: (appId: number) => void;
+    AddShortcut(appName: string, executablePath: string, directory: string, launchOptions: string): Promise<number>;
+    SetShortcutExe(appId: number, path: string): void;
+    SetShortcutIcon(appId: number, path: string): void;
+    SetShortcutIsVR(appId: number, value: boolean): void;
+    SetShortcutLaunchOptions(appId: number, options: string): void;
+    SetShortcutName(appId: number, name: string): void;
+    SetShortcutStartDir(appId: number, directory: string): void;
+    RegisterForAppDetails(appId: number, callback: (details: Record<string, unknown>) => void): void;
 }
 
 interface SteamClientAuth {

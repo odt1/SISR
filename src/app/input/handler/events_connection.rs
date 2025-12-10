@@ -316,6 +316,7 @@ fn handle_existing_device_connect(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_new_device(
     viiper: &mut super::viiper_bridge::ViiperBridge,
     guard: &mut std::sync::MutexGuard<'_, super::State>,

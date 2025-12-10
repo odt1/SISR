@@ -62,6 +62,19 @@ pub fn draw(
                         RichText::new(if via_steam { "Yes" } else { "No" }.to_string()).weak(),
                     );
                 });
+                if !via_steam {
+                    ui.horizontal_wrapped(|ui| {
+                        ui.label(RichText::new("Marker App ID:").strong());
+                        ui.label(
+                            RichText::new(if state.marker_steam_app_id != 0 {
+                                state.marker_steam_app_id.to_string()
+                            } else {
+                                "N/A".to_string()
+                            })
+                            .weak(),
+                        );
+                    });
+                }
 
                 ui.horizontal_wrapped(|ui| {
                     ui.label(RichText::new("Steam Overlay:").strong());
@@ -90,15 +103,21 @@ pub fn draw(
                 ui.separator();
 
                 let has_app_id = enforcer.app_id().is_some();
+                let has_marker_app_id = state.marker_steam_app_id != 0;
                 let mut active = enforcer.is_active();
                 ui.separator();
                 ui.collapsing(
                     RichText::new("Steam Input Config").strong().size(18.0),
                     |ui| {
-                        ui.add_enabled_ui(has_app_id, |ui| {
+                        ui.add_enabled_ui(has_app_id || has_marker_app_id, |ui| {
+                            let app_id = if has_app_id {
+                                enforcer.app_id().unwrap()
+                            } else {
+                                state.marker_steam_app_id
+                            };
                             if ui.checkbox(&mut active, "Force Config").changed() {
                                 if active {
-                                    enforcer.activate();
+                                    enforcer.activate_with_appid(app_id);
                                 } else {
                                     enforcer.deactivate();
                                 }
@@ -106,10 +125,7 @@ pub fn draw(
                             ui.style_mut().spacing.button_padding = Vec2::new(12.0, 6.0);
                             let btn = Button::new("🛠 Open Configurator").selected(true);
                             if ui.add(btn).clicked() {
-                                let str = &format!(
-                                    "steam://controllerconfig/{}",
-                                    enforcer.app_id().unwrap()
-                                );
+                                let str = &format!("steam://controllerconfig/{}", app_id);
                                 _ = open_steam_url(str).inspect_err(|e| {
                                     warn!("Failed to open Steam Input Configurator: {}", e)
                                 });

@@ -61,14 +61,15 @@ pub async fn inject(tab_title: &str, payload: &str) -> Result<String> {
     let (ws_stream, _) = tokio_tungstenite::connect_async(&ws_url).await?;
     let (mut write, mut read) = ws_stream.split();
 
-    let js_payload = format!("var SISR_HOST = 'localhost:{}';\n{}", ws_port, payload);
+    let js_payload = format!("var SISR_HOST = 'localhost:{}';\n {}", ws_port, payload);
 
     let command = serde_json::json!({
         "id": 1,
         "method": "Runtime.evaluate",
         "params": {
             "expression": js_payload,
-            "returnByValue": true
+            "returnByValue": true,
+            "awaitPromise": true
         }
     });
 
@@ -83,6 +84,7 @@ pub async fn inject(tab_title: &str, payload: &str) -> Result<String> {
         let response = msg?;
         if let Message::Text(text) = response {
             let text_str = text.to_string();
+            trace!("Inject Response: {}", text_str);
             let result: serde_json::Value = serde_json::from_str(&text_str)?;
 
             if let Some(exception_details) =

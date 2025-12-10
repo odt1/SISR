@@ -161,4 +161,21 @@ Enable continous redraw now?
                 .store(open, std::sync::atomic::Ordering::Relaxed);
         }
     }
+
+    pub fn on_marker_app_id_changed(&mut self, app_id: u32) {
+        debug!("Marker app ID changed event received: {}", app_id);
+        let Ok(mut guard) = self.state.lock() else {
+            error!(
+                "Failed to acquire event handler state lock on marker app ID change to {}",
+                app_id
+            );
+            return;
+        };
+        guard.marker_steam_app_id = app_id;
+        // TODO: set env variables
+        // load steamOverlay
+        // other events should handle the rest????
+
+        self.request_redraw();
+    }
 }

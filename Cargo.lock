@@ -21,6 +21,7 @@ dependencies = [
  "glib 0.21.5",
  "gtk",
  "image",
+ "new-vdf-parser",
  "pollster",
  "reqwest",
  "ron 0.12.0",
@@ -2723,6 +2724,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee6cda3051665f1fb8d9e08fc35c96d5a244fb1be711a03b71118828afc9a873"
 dependencies = [
  "jni-sys",
+]
+
+[[package]]
+name = "new-vdf-parser"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f496cfe7d3c04fb88bd80599e5ff7d57d955bc3aa9a4ff803f72310468d5ed6e"
+dependencies = [
+ "rayon",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

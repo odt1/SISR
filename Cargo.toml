@@ -33,6 +33,7 @@ sysinfo = { version = "0.37.2", features = ["windows", "serde"] }
 tokio-tungstenite = "0.28.0"
 futures-util = "0.3.31"
 serde_json = "1.0.145"
+new-vdf-parser = "0.2.0"
 
 
 [target."cfg(windows)".dependencies]
