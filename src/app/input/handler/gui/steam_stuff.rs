@@ -62,19 +62,6 @@ pub fn draw(
                         RichText::new(if via_steam { "Yes" } else { "No" }.to_string()).weak(),
                     );
                 });
-                if !via_steam {
-                    ui.horizontal_wrapped(|ui| {
-                        ui.label(RichText::new("Marker App ID:").strong());
-                        ui.label(
-                            RichText::new(if state.marker_steam_app_id != 0 {
-                                state.marker_steam_app_id.to_string()
-                            } else {
-                                "N/A".to_string()
-                            })
-                            .weak(),
-                        );
-                    });
-                }
 
                 ui.horizontal_wrapped(|ui| {
                     ui.label(RichText::new("Steam Overlay:").strong());
@@ -103,18 +90,14 @@ pub fn draw(
                 ui.separator();
 
                 let has_app_id = enforcer.app_id().is_some();
-                let has_marker_app_id = state.marker_steam_app_id != 0;
                 let mut active = enforcer.is_active();
                 ui.separator();
                 ui.collapsing(
                     RichText::new("Steam Input Config").strong().size(18.0),
                     |ui| {
-                        ui.add_enabled_ui(has_app_id || has_marker_app_id, |ui| {
-                            let app_id = if has_app_id {
-                                enforcer.app_id().unwrap()
-                            } else {
-                                state.marker_steam_app_id
-                            };
+                        ui.add_enabled_ui(has_app_id, |ui| {
+                            let app_id = enforcer.app_id().expect("App ID should be present");
+
                             if ui.checkbox(&mut active, "Force Config").changed() {
                                 if active {
                                     enforcer.activate_with_appid(app_id);

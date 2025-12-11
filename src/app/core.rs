@@ -16,12 +16,14 @@ use crate::app::input::handler::HandlerEvent;
 use crate::app::input::{self};
 use crate::app::steam_utils::cef_debug;
 use crate::app::steam_utils::cef_debug::ensure::{
-    ensure_cef_enabled, ensure_steam_running, restart_steam,
+    ensure_cef_enabled, ensure_steam_running,
 };
 use crate::app::steam_utils::cef_ws::WebSocketServer;
-use crate::app::steam_utils::util::launched_via_steam;
+use crate::app::steam_utils::util::{
+    launched_via_steam, load_steam_overlay, try_set_marker_steam_env,
+};
 use crate::app::window::RunnerEvent;
-use crate::app::{signals, steam_utils};
+use crate::app::{gui, signals, steam_utils};
 use crate::config;
 
 pub struct App {
@@ -49,6 +51,23 @@ impl App {
             .enable_all()
             .build()
             .expect("Failed to create async (tokio) runtime");
+
+        gui::dialogs::REGISTRY
+            .set(dialogs::Registry::new(self.winit_waker.clone()))
+            .expect("Failed to init dialog registry");
+
+        if !launched_via_steam() {
+            match try_set_marker_steam_env() {
+                Ok(_) => {
+                    info!("Successfully set marker Steam environment variables");
+                    load_steam_overlay();
+                }
+                Err(e) => {
+                    error!("Failed to set marker Steam environment variables: {}", e);
+                    // TODO: some error handling, whatever
+                }
+            }
+        }
 
         let sdl_waker = self.sdl_waker.clone();
         let winit_waker_for_sdl = self.winit_waker.clone();
@@ -131,6 +150,7 @@ impl App {
             window_ready,
             continuous_redraw,
         );
+
         let mut exit_code = window_runner.run();
         Self::shutdown(Some(&self.sdl_waker), Some(&self.winit_waker));
 
@@ -225,7 +245,7 @@ impl App {
             trace!("Steam path: {:?}", steam_path);
             let active_user_id = steam_utils::util::active_user_id();
             trace!("Active Steam user ID: {:?}", active_user_id);
-            let mut marker_app_id = 0;
+            let mut marker_app_id: u32 = std::env::var("SISR_MARKER_ID").unwrap_or_default().parse().unwrap_or(0);
             if let Some(steam_path) = steam_path.clone()
                 && let Some(user_id) = active_user_id
             {
@@ -241,16 +261,6 @@ impl App {
                     "Steam shortcuts.vdf has SISR Marker shortcut with App ID: {}",
                     marker_app_id
                 );
-                let Ok(sdl_waker_guard) = sdl_waker.lock() else {
-                    error!("Failed to lock SDL waker to notify marker app ID");
-                    return;
-                };
-                sdl_waker_guard.as_ref().and_then(|sender| {
-                    trace!("Notifying SDL input handler of marker app ID: {}", marker_app_id);
-                    sender
-                        .push_custom_event(HandlerEvent::MarkerAppIdChanged { app_id: marker_app_id })
-                        .ok()
-                });
             } else {
                 warn!(
                     "Steam path or active user ID not found; {:?}, {:?}",
@@ -258,19 +268,15 @@ impl App {
                 );
             }
             if marker_app_id == 0 && !launched_via_steam() {
-                let sdl_waker = sdl_waker.clone();
-                let winit_waker = winit_waker.clone();
                 let handle_clone = async_handle.clone();
                 _ = push_dialog(dialogs::Dialog::new_yes_no(
                     "SISR marker not found",
                     "SISR requires a marker in your Steam shortcuts
 Would you like to create the marker shortcut now?
-Steam must be running to create the shortcut and will be restarted afterward.
+Steam MUST BE RUNNING and SISR will attempt to restart itself afterwards.
 
 Selecting 'No' will exit SISR.",
                     move || {
-                        let sdl_waker = sdl_waker.clone();
-                        let winit_waker = winit_waker.clone();
                         handle_clone.clone().spawn(async move {
                             let marker_app_id = match steam_utils::util::create_sisr_marker_shortcut()
                                 .await
@@ -288,18 +294,36 @@ Selecting 'No' will exit SISR.",
                                 }
                             };
                             if marker_app_id != 0 {
-                                // _ = restart_steam(winit_waker.clone()).await;
-                                let Ok(sdl_waker_guard) = sdl_waker.lock() else {
-                                    error!("Failed to lock SDL waker to notify marker app ID");
-                                    return;
-                                };
-                                sdl_waker_guard.as_ref().and_then(|sender| {
-                                    trace!("Notifying SDL input handler of marker app ID: {}", marker_app_id);
-                                    sender
-                                        .push_custom_event(HandlerEvent::MarkerAppIdChanged { app_id: marker_app_id })
-                                        .ok()
-                                });
-                            }
+                                let executable_path = std::env::current_exe().expect("Failed to get current exe path");
+                                let args: Vec<String> = std::env::args().skip(1).collect();
+                                
+                                #[cfg(target_os = "windows")]
+                                {
+                                    use std::os::windows::process::CommandExt;
+                                    let _ = std::process::Command::new(&executable_path)
+                                        .args(&args)
+                                        // .creation_flags(0x00000008) // CREATE_NO_WINDOW
+                                        .creation_flags(0x00000200) // CREATE_NEW_PROCESS_GROUP
+                                        .spawn();
+                                }
+                                
+                                #[cfg(target_os = "linux")]
+                                {
+                                    use std::os::unix::process::CommandExt;
+                                    let _ = std::process::Command::new(&executable_path)
+                                        .args(&args)
+                                        .exec();
+                                }
+                                std::process::exit(0);
+                            } 
+                            _ = push_dialog(dialogs::Dialog::new_ok(
+                                "Create Marker Shortcut", 
+                                "Failed to create SISR marker shortcut.
+Please create a shortcut to SISR with the launch argument '--marker' in your Steam shortcuts manually.
+
+The application will now exit.", ||{
+                                std::process::exit(1);
+                            }))
                         });
                     },
                     || {

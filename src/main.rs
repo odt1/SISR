@@ -3,7 +3,10 @@
 
 use std::{env, process::ExitCode};
 
-use sisr::{app::steam_utils, logging};
+use sisr::{
+    app::steam_utils::{self, util::load_steam_overlay},
+    logging,
+};
 use tracing::{error, info, trace};
 
 fn main() -> ExitCode {
@@ -50,6 +53,8 @@ fn main() -> ExitCode {
         env::set_var("SteamStreamingVideo", "0");
         env::set_var("SteamStreaming", "0");
 
+        env::set_var("SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD", "1");
+        env::set_var("SDL_JOYSTICK_HIDAPI_STEAMXBOX", "0");
         // this specific SDL_Hint doesn't work when Steam is injected.
         // Envar does...
         // Ignore real controllers for now util we have found a way to "merge" them with Steams virtual controllers. (when using more than 1...)

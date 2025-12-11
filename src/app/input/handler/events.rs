@@ -7,5 +7,4 @@ pub enum HandlerEvent {
     DisconnectViiperDevice { device_id: u64 },
     CefDebugReady { port: u16 },
     OverlayStateChanged { open: bool },
-    MarkerAppIdChanged { app_id: u32 },
 }

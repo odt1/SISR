@@ -18,7 +18,7 @@ use winit::window::{Window, WindowAttributes, WindowId};
 use winit::platform::windows::WindowAttributesExtWindows;
 
 use crate::app::gui::dispatcher::GuiDispatcher;
-use crate::app::gui::{self, dark_theme, dialogs, light_theme};
+use crate::app::gui::{dark_theme, dialogs, light_theme};
 use crate::config::{self, CONFIG};
 use crate::gfx::Gfx;
 
@@ -76,10 +76,6 @@ impl WindowRunner {
                 *style = light_style.clone();
             }
         });
-
-        gui::dialogs::REGISTRY
-            .set(dialogs::Registry::new(winit_waker.clone()))
-            .expect("Failed to init dialog registry");
 
         Self {
             window: None,

@@ -1,6 +1,9 @@
 use new_vdf_parser::open_shortcuts_vdf;
+use std::sync::RwLock;
 use std::{path::PathBuf, process::Command, sync::OnceLock};
 use tracing::debug;
+use tracing::error;
+use tracing::info;
 use tracing::trace;
 use tracing::warn;
 
@@ -8,6 +11,7 @@ use crate::app::steam_utils::cef_debug;
 
 static STEAM_PATH: OnceLock<Option<PathBuf>> = OnceLock::new();
 static LAUNCHED_VIA_STEAM: OnceLock<bool> = OnceLock::new();
+static OVERLAY_LIB: RwLock<Option<libloading::Library>> = RwLock::new(None);
 
 pub fn init() {
     let launched_via_steam = std::env::var("SteamGameId").is_ok();
@@ -264,7 +268,7 @@ pub fn shortcuts_has_sisr_marker(shortcuts_path: &PathBuf) -> u32 {
 }
 
 pub async fn create_sisr_marker_shortcut() -> anyhow::Result<u32> {
-    let mut payload = format!(
+    let payload = format!(
         "var SISR_PATH = `{}`;\n",
         std::env::current_exe()
             .unwrap_or_default()
@@ -290,4 +294,123 @@ pub async fn create_sisr_marker_shortcut() -> anyhow::Result<u32> {
             e
         )),
     }
+}
+
+pub fn load_steam_overlay() {
+    if launched_via_steam() {
+        debug!("Launched via Steam; skipping Steam overlay load");
+        return;
+    }
+
+    if !steam_running() {
+        warn!("Steam is not running; cannot loading Steam overlay is useless!");
+        return;
+    }
+
+    let steam_path = match steam_path() {
+        Some(path) => path,
+        None => {
+            warn!("Could not determine Steam installation path; cannot load Steam overlay");
+            return;
+        }
+    };
+
+    let mut steam_overlay_path = steam_path;
+    #[cfg(target_os = "windows")]
+    {
+        steam_overlay_path = steam_overlay_path.join("GameOverlayRenderer64.dll");
+    }
+    #[cfg(target_os = "linux")]
+    {
+        steam_overlay_path = steam_overlay_path
+            .parent()
+            .unwrap()
+            .join("bin64")
+            .join("gameoverlayrenderer.so");
+    }
+
+    unsafe {
+        match libloading::Library::new(steam_overlay_path) {
+            Ok(lib) => {
+                OVERLAY_LIB
+                    .write()
+                    .expect("Couldn't lock gameoverlaystorage for writing")
+                    .replace(lib);
+                info!("Successfully loaded Steam overlay library");
+            }
+            Err(e) => {
+                error!("Failed to load Steam overlay library: {}", e);
+            }
+        }
+    }
+}
+
+pub fn unload_steam_overlay() {
+    OVERLAY_LIB
+        .write()
+        .expect("Couldn't lock gameoverlaystorage for writing")
+        .take();
+    info!("Unloaded Steam overlay library");
+}
+
+pub fn try_set_marker_steam_env() -> anyhow::Result<()> {
+    let Some(steam_path) = steam_path() else {
+        warn!("Steam path could not be determined; Steam integration may not work correctly");
+        return Err(anyhow::anyhow!("Steam path could not be determined"));
+    };
+    let Some(steam_active_user_id) = active_user_id() else {
+        warn!(
+            "Active Steam user ID could not be determined; Steam integration may not work correctly"
+        );
+        return Err(anyhow::anyhow!(
+            "Active Steam user ID could not be determined"
+        ));
+    };
+    let Some(shortcuts_path) = get_shortcuts_path(&steam_path.clone(), steam_active_user_id) else {
+        warn!("Failed to determine Steam shortcuts.vdf path");
+        return Err(anyhow::anyhow!(
+            "Failed to determine Steam shortcuts.vdf path"
+        ));
+    };
+    trace!("Steam shortcuts.vdf path: {:?}", shortcuts_path);
+    let marker_app_id = shortcuts_has_sisr_marker(&shortcuts_path);
+    if marker_app_id == 0 {
+        warn!(
+            "No SISR marker shortcut found in Steam shortcuts; Steam integration may not work correctly"
+        );
+        return Err(anyhow::anyhow!(
+            "No SISR marker shortcut found in Steam shortcuts"
+        ));
+    }
+    unsafe {
+        std::env::set_var("SteamClientLaunch", "0");
+
+        std::env::set_var("SteamAppId", "0");
+        std::env::set_var("SISR_MARKER_ID", marker_app_id.to_string());
+        let game_id = (marker_app_id as u64) << 32 | (2 << 24) as u64;
+        std::env::set_var("SteamGameId", game_id.to_string());
+        std::env::set_var("SteamOverlayGameId", game_id.to_string());
+        // TODO: is this needed? decode the values
+        // std::env::set_var("EnableConfiguratorSupport", "4111");
+        std::env::set_var("SteamPath", steam_path.to_string_lossy().to_string());
+
+        // TODO: is this always the same, and always existing?
+        let gamepad_info_path = steam_path
+            .clone()
+            .join("config")
+            .join("virtualgamepadinfo.txt");
+        if !gamepad_info_path.exists() {
+            warn!(
+                "Steam virtualgamepadinfo.txt not found at expected path: {}",
+                gamepad_info_path.display()
+            );
+            return Err(anyhow::anyhow!("Steam virtualgamepadinfo.txt not found"));
+        }
+        // Is needed for steamHandles to be created
+        std::env::set_var(
+            "SteamVirtualGamepadInfo",
+            gamepad_info_path.to_string_lossy().to_string(),
+        );
+    }
+    Ok(())
 }

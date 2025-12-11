@@ -48,7 +48,6 @@ pub(super) struct State {
     cef_debug_port: Option<u16>,
     steam_overlay_open: bool,
     window_continuous_redraw: Arc<AtomicBool>,
-    marker_steam_app_id: u32,
 }
 
 impl EventHandler {
@@ -70,7 +69,6 @@ impl EventHandler {
             cef_debug_port: None,
             steam_overlay_open: false,
             window_continuous_redraw: window_continuous_redraw.clone(),
-            marker_steam_app_id: 0,
         }));
         let bottom_bar = Arc::new(Mutex::new(BottomBar::new()));
         let clone_handle = async_handle.clone();

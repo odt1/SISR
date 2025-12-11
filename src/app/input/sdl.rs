@@ -295,9 +295,6 @@ impl InputLoop {
                                 super::handler::HandlerEvent::OverlayStateChanged { open } => {
                                     handler.on_overlay_state_changed(open);
                                 }
-                                super::handler::HandlerEvent::MarkerAppIdChanged { app_id } => {
-                                    handler.on_marker_app_id_changed(app_id);
-                                }
                             }
                             return Ok(false);
                         }
