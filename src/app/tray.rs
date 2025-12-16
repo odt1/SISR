@@ -1,16 +1,16 @@
 use std::sync::{Arc, Mutex};
 
 use sdl3::event::EventSender;
-#[cfg(windows)]
+use tracing::{Level, error, event, info, span, warn};
 use tracing::Span;
-use tracing::{Level, error, event, info, span};
-#[cfg(target_os = "linux")]
-use tracing::{Span, trace};
 use tray_icon::menu::{Menu, MenuEvent, MenuId, MenuItem};
 use tray_icon::{Icon, TrayIcon, TrayIconBuilder};
 use winit::event_loop::EventLoopProxy;
 
 use crate::app::window::RunnerEvent;
+use crate::app::steam_utils::binding_enforcer::binding_enforcer;
+use crate::app::steam_utils::util::open_controller_config;
+use tokio::runtime::Handle;
 
 use super::core::App;
 
@@ -29,9 +29,12 @@ struct TrayContext {
     quit_id: MenuId,
     toggle_window_item: MenuItem,
     toggle_window_id: MenuId,
+    open_config_item: MenuItem,
+    open_config_id: MenuId,
     window_visible: Arc<Mutex<bool>>,
     sdl_waker: Arc<Mutex<Option<EventSender>>>,
     winit_waker: Arc<Mutex<Option<EventLoopProxy<RunnerEvent>>>>,
+    async_handle: Handle,
 }
 
 impl TrayContext {
@@ -39,6 +42,7 @@ impl TrayContext {
         sdl_waker: Arc<Mutex<Option<EventSender>>>,
         winit_waker: Arc<Mutex<Option<EventLoopProxy<RunnerEvent>>>>,
         window_visible: Arc<Mutex<bool>>,
+        async_handle: Handle,
     ) -> Self {
         let icon = load_icon();
         let menu = Menu::new();
@@ -53,6 +57,11 @@ impl TrayContext {
         let toggle_window_id = toggle_window_item.id().clone();
         menu.append(&toggle_window_item)
             .expect("Failed to add toggle window item");
+
+        let has_app_id = binding_enforcer().lock().ok().and_then(|e| e.app_id()).is_some();
+        let open_config_item = MenuItem::new("Steam Controllerconfig", has_app_id, None);
+        let open_config_id = open_config_item.id().clone();
+        menu.append(&open_config_item).expect("Failed to add open configurator item");
 
         let quit_item = MenuItem::new("Quit", true, None);
         let quit_id = quit_item.id().clone();
@@ -70,13 +79,21 @@ impl TrayContext {
             quit_id,
             toggle_window_item,
             toggle_window_id,
+            open_config_item,
+            open_config_id,
             window_visible,
             sdl_waker,
             winit_waker,
+            async_handle,
         }
     }
 
     fn handle_events(&self) -> bool {
+        if let Ok(guard) = binding_enforcer().lock() {
+            self.open_config_item.set_enabled(guard.app_id().is_some());
+        } else {
+            warn!("Failed to acquire binding enforcer lock to update open configurator menu item");
+        }
         if let Ok(event) = MenuEvent::receiver().try_recv() {
             if event.id == self.quit_id {
                 info!("Quit requested from tray menu");
@@ -111,6 +128,14 @@ impl TrayContext {
                     };
                     _ = proxy.send_event(event);
                 }
+                return false;
+            }
+            if event.id == self.open_config_id {
+                if let Ok(guard) = binding_enforcer().lock()
+                    && let Some(app_id) = guard.app_id() {
+                        let handle = self.async_handle.clone();
+                        handle.spawn(open_controller_config(app_id));
+                    }
                 return false;
             }
         }
@@ -150,9 +175,10 @@ pub fn run(
     sdl_waker: Arc<Mutex<Option<EventSender>>>,
     winit_waker: Arc<Mutex<Option<EventLoopProxy<RunnerEvent>>>>,
     window_visible: Arc<Mutex<bool>>,
+    async_handle: Handle,
 ) {
     let span = span!(Level::INFO, "tray");
-    run_platform(span, sdl_waker, winit_waker, window_visible);
+    run_platform(span, sdl_waker, winit_waker, window_visible, async_handle);
 }
 
 #[cfg(windows)]
@@ -161,6 +187,7 @@ fn run_platform(
     sdl_waker: Arc<Mutex<Option<EventSender>>>,
     winit_waker: Arc<Mutex<Option<EventLoopProxy<RunnerEvent>>>>,
     window_visible: Arc<Mutex<bool>>,
+    async_handle: Handle,
 ) {
     use windows_sys::Win32::System::Threading::GetCurrentThreadId;
     use windows_sys::Win32::UI::WindowsAndMessaging::{
@@ -170,7 +197,7 @@ fn run_platform(
     let thread_id = unsafe { GetCurrentThreadId() };
     TRAY_THREAD_ID.store(thread_id, std::sync::atomic::Ordering::SeqCst);
 
-    let ctx = TrayContext::new(sdl_waker, winit_waker, window_visible);
+    let ctx = TrayContext::new(sdl_waker, winit_waker, window_visible, async_handle);
 
     loop {
         if ctx.handle_events() {
@@ -197,13 +224,14 @@ fn run_platform(
     sdl_waker: Arc<Mutex<Option<EventSender>>>,
     winit_waker: Arc<Mutex<Option<EventLoopProxy<RunnerEvent>>>>,
     window_visible: Arc<Mutex<bool>>,
+    async_handle: Handle,
 ) {
     if gtk::init().is_err() {
         event!(parent: &span, Level::ERROR, "Failed to initialize GTK for tray icon");
         return;
     }
 
-    let ctx = Arc::new(TrayContext::new(sdl_waker, winit_waker, window_visible));
+    let ctx = Arc::new(TrayContext::new(sdl_waker, winit_waker, window_visible, async_handle));
 
     glib::idle_add_local(move || {
         if ctx.handle_events() {
@@ -222,6 +250,7 @@ fn run_platform(
     _sdl_waker: Arc<Mutex<Option<EventSender>>>,
     _winit_waker: Arc<Mutex<Option<EventLoopProxy<RunnerEvent>>>>,
     _window_visible: Arc<Mutex<bool>>,
+    _async_handle: Handle,
 ) {
     event!(parent: &span, Level::WARN, "macOS tray icon requires main thread NSApplication event loop - not yet implemented");
 }

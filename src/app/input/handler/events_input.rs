@@ -1,5 +1,6 @@
 use sdl3::event::Event;
 use tracing::{debug, error, trace, warn};
+use crate::app::steam_utils::binding_enforcer::binding_enforcer;
 
 use crate::app::input::{device::SDLDevice, handler::ViiperEvent};
 
@@ -87,9 +88,11 @@ impl EventHandler {
                             .devices
                             .iter()
                             .any(|(_, d)| d.steam_handle != 0 && d.viiper_connected);
-                        if !has_any_steam_viiper && guard.binding_enforcer.is_active() {
-                            guard.binding_enforcer.deactivate();
-                        }
+                        if !has_any_steam_viiper
+                            && let Ok(mut enforcer) = binding_enforcer().lock()
+                                && enforcer.is_active() {
+                                    enforcer.deactivate();
+                                }
                     }
                 }
             }
@@ -128,10 +131,12 @@ impl EventHandler {
                         .devices
                         .iter()
                         .any(|(_, d)| d.steam_handle != 0 && d.viiper_connected);
-                    if has_any_steam_viiper && !guard.binding_enforcer.is_active() {
-                        guard.binding_enforcer.activate();
+                    if has_any_steam_viiper
+                        && let Ok(mut enforcer) = binding_enforcer().lock()
+                            && !enforcer.is_active() {
+                                enforcer.activate();
+                            }
                     }
-                }
 
                 self.request_redraw();
             }

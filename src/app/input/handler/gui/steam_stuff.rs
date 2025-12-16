@@ -2,9 +2,11 @@ use std::sync::{Arc, Mutex, atomic::Ordering};
 
 use egui::{Button, Id, RichText, Vec2};
 use sdl3::event::EventSender;
+use tracing::warn;
 
 use crate::app::input::handler::State;
 use crate::app::steam_utils::util::{launched_via_steam, open_controller_config};
+use crate::app::steam_utils::binding_enforcer::binding_enforcer;
 
 pub fn draw(
     state: &mut State,
@@ -25,7 +27,10 @@ pub fn draw(
         .open(open)
         .show(ctx, |ui| {
             egui::ScrollArea::both().auto_shrink(false).show(ui, |ui| {
-                let enforcer = &mut state.binding_enforcer;
+                let Ok(mut enforcer) = binding_enforcer().lock() else {
+                    warn!("Failed to acquire binding enforcer lock for Steam Stuff GUI");
+                    return;
+                };
 
                 ui.horizontal_wrapped(|ui| {
                     ui.label(RichText::new("Game ID:").strong());

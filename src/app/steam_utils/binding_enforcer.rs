@@ -1,4 +1,5 @@
 use tracing::{debug, error, info, warn};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use crate::app::{signals, steam_utils::util::open_steam_url};
 
@@ -139,4 +140,10 @@ pub fn install_cleanup_handlers() {
     }) {
         warn!("Failed to install Steam cleanup Ctrl+C handler: {}", e);
     }
+}
+
+static BINDING_ENFORCER: OnceLock<Arc<Mutex<BindingEnforcer>>> = OnceLock::new();
+
+pub fn binding_enforcer() -> &'static Arc<Mutex<BindingEnforcer>> {
+    BINDING_ENFORCER.get_or_init(|| Arc::new(Mutex::new(BindingEnforcer::new())))
 }

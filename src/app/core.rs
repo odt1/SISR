@@ -91,11 +91,13 @@ impl App {
             let sdl_waker_for_tray = self.sdl_waker.clone();
             let winit_waker_for_tray = self.winit_waker.clone();
             let window_visible_for_tray = window_visible.clone();
+            let handle_for_tray = async_rt.handle().clone();
             Some(thread::spawn(move || {
                 tray::run(
                     sdl_waker_for_tray,
                     winit_waker_for_tray,
                     window_visible_for_tray,
+                    handle_for_tray,
                 );
             }))
         } else {

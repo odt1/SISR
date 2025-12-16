@@ -24,9 +24,7 @@ use crate::app::{
     input::device::{Device, DeviceState, SDLDevice},
     window::RunnerEvent,
 };
-use crate::app::{
-    input::handler::gui::bottom_bar::BottomBar, steam_utils::binding_enforcer::BindingEnforcer,
-};
+use crate::app::input::handler::gui::bottom_bar::BottomBar;
 
 pub struct EventHandler {
     winit_waker: Arc<Mutex<Option<EventLoopProxy<RunnerEvent>>>>,
@@ -44,7 +42,6 @@ pub struct EventHandler {
 pub(super) struct State {
     devices: HashMap<u64, Device>,
     viiper_address: Option<SocketAddr>,
-    binding_enforcer: BindingEnforcer,
     cef_debug_port: Option<u16>,
     steam_overlay_open: bool,
     window_continuous_redraw: Arc<AtomicBool>,
@@ -66,7 +63,6 @@ impl EventHandler {
         let state = Arc::new(Mutex::new(State {
             devices: HashMap::new(),
             viiper_address,
-            binding_enforcer: BindingEnforcer::new(),
             cef_debug_port: None,
             steam_overlay_open: false,
             window_continuous_redraw: window_continuous_redraw.clone(),
