@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use sdl3::event::EventSender;
 use tracing::{Level, error, event, info, span, warn};
 use tracing::Span;
-use tray_icon::menu::{Menu, MenuEvent, MenuId, MenuItem};
+use tray_icon::menu::{CheckMenuItem, Menu, MenuEvent, MenuId, MenuItem};
 use tray_icon::{Icon, TrayIcon, TrayIconBuilder};
 use winit::event_loop::EventLoopProxy;
 
@@ -31,6 +31,8 @@ struct TrayContext {
     toggle_window_id: MenuId,
     open_config_item: MenuItem,
     open_config_id: MenuId,
+    force_config_item: CheckMenuItem,
+    force_config_id: MenuId,
     window_visible: Arc<Mutex<bool>>,
     sdl_waker: Arc<Mutex<Option<EventSender>>>,
     winit_waker: Arc<Mutex<Option<EventLoopProxy<RunnerEvent>>>>,
@@ -63,6 +65,10 @@ impl TrayContext {
         let open_config_id = open_config_item.id().clone();
         menu.append(&open_config_item).expect("Failed to add open configurator item");
 
+        let force_config_item = CheckMenuItem::new("Force Controllerconfig", true, false, None);
+        let force_config_id = force_config_item.id().clone();
+        menu.append(&force_config_item).expect("Failed to add force config item");
+
         let quit_item = MenuItem::new("Quit", true, None);
         let quit_id = quit_item.id().clone();
         menu.append(&quit_item).expect("Failed to add quit item");
@@ -81,6 +87,8 @@ impl TrayContext {
             toggle_window_id,
             open_config_item,
             open_config_id,
+            force_config_item,
+            force_config_id,
             window_visible,
             sdl_waker,
             winit_waker,
@@ -91,6 +99,7 @@ impl TrayContext {
     fn handle_events(&self) -> bool {
         if let Ok(guard) = binding_enforcer().lock() {
             self.open_config_item.set_enabled(guard.app_id().is_some());
+            self.force_config_item.set_checked(guard.is_active());
         } else {
             warn!("Failed to acquire binding enforcer lock to update open configurator menu item");
         }
@@ -136,6 +145,16 @@ impl TrayContext {
                         let handle = self.async_handle.clone();
                         handle.spawn(open_controller_config(app_id));
                     }
+                return false;
+            }
+            if event.id == self.force_config_id {
+                if let Ok(mut guard) = binding_enforcer().lock() {
+                    if guard.is_active() {
+                        guard.deactivate();
+                    } else {
+                        guard.activate();
+                    }
+                }
                 return false;
             }
         }
