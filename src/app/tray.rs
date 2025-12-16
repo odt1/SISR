@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use sdl3::event::EventSender;
-use tracing::{Level, error, event, info, span, warn};
+use tracing::{Level, error, event, info, span, warn, trace};
 use tracing::Span;
 use tray_icon::menu::{CheckMenuItem, Menu, MenuEvent, MenuId, MenuItem};
 use tray_icon::{Icon, TrayIcon, TrayIconBuilder};
