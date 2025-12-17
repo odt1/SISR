@@ -9,13 +9,12 @@ use tray_icon::{Icon, TrayIcon, TrayIconBuilder};
 use winit::event_loop::EventLoopProxy;
 
 use crate::app::window::RunnerEvent;
+use crate::app::window::ICON_BYTES;
 use crate::app::steam_utils::binding_enforcer::binding_enforcer;
 use crate::app::steam_utils::util::open_controller_config;
 use tokio::runtime::Handle;
 
 use super::core::App;
-
-const ICON_BYTES: &[u8] = include_bytes!("../../assets/icon.ico");
 
 #[cfg(windows)]
 static TRAY_THREAD_ID: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);

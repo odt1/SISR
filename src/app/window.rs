@@ -22,6 +22,8 @@ use crate::app::gui::{dark_theme, dialogs, light_theme};
 use crate::config::{self, CONFIG};
 use crate::gfx::Gfx;
 
+pub const ICON_BYTES: &[u8] = include_bytes!("../../assets/icon.ico");
+
 pub enum RunnerEvent {
     Quit(),
     Redraw(),
@@ -275,14 +277,25 @@ impl ApplicationHandler<RunnerEvent> for WindowRunner {
             .create
             .unwrap_or(false);
 
+        let icon = image::load_from_memory(ICON_BYTES)
+            .ok()
+            .and_then(|img| {
+                let rgba = img.into_rgba8();
+                let (w, h) = rgba.dimensions();
+                winit::window::Icon::from_rgba(rgba.into_raw(), w, h).ok()
+            });
+
         let mut window_attrs = WindowAttributes::default()
             .with_title("SISR")
             .with_inner_size(winit::dpi::LogicalSize::new(1280.0, 720.0))
             .with_transparent(true)
-            .with_visible(initially_visible);
+            .with_visible(initially_visible)
+            .with_window_icon(icon.clone());
 
         #[cfg(windows)]
         {
+            window_attrs = window_attrs.with_taskbar_icon(icon);
+            
             if window_attrs.transparent {
                 trace!("Disabling redirection bitmap for transparency on Windows");
                 window_attrs = window_attrs.with_no_redirection_bitmap(true);
