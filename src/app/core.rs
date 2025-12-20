@@ -499,6 +499,7 @@ The application will now exit.", ||{
                         }
 
                         info!("VIIPER is ready (version={})", version);
+                         window_ready.notified().await;
                         if sdl_waker.lock().ok().and_then(|guard| {
                             guard.as_ref().and_then(|sender| {
                                 trace!("Notifying SDL input handler of VIIPER readiness");
