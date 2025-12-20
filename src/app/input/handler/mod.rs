@@ -55,6 +55,8 @@ pub(super) struct State {
     kbm_mouse_buttons: u8,
     window_continuous_redraw: Arc<AtomicBool>,
     async_handle: tokio::runtime::Handle,
+    viiper_ready: bool,
+    viiper_version: Option<String>,
 }
 
 impl EventHandler {
@@ -81,6 +83,8 @@ impl EventHandler {
             kbm_mouse_buttons: 0,
             window_continuous_redraw: window_continuous_redraw.clone(),
             async_handle: async_handle.clone(),
+            viiper_ready: false,
+            viiper_version: None,
         }));
         let bottom_bar = Arc::new(Mutex::new(BottomBar::new()));
         let clone_handle = async_handle.clone();

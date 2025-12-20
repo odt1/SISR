@@ -293,4 +293,50 @@ Enable continous redraw now?
             error!("Failed to send overlay state change to window: {}", e);
         }
     }
+
+    pub fn on_viiper_ready(&mut self, version: String) {
+        info!("VIIPER reported ready with version {}", version);
+        let Ok(mut guard) = self.state.lock() else {
+            error!(
+                "Failed to acquire event handler state lock on VIIPER ready with version {}",
+                version
+            );
+            return;
+        };
+        guard.viiper_version = Some(version.clone());
+        guard.viiper_ready = true;
+        self.request_redraw();
+        for device in guard.devices.values_mut() {
+            if device.viiper_device.is_none() {
+                if device.viiper_type == "keyboard" {
+                    info!(
+                        "connecting keyboard device ID {} to VIIPER now that VIIPER is ready",
+                        device.id
+                    );
+                    self.viiper.create_device(device);
+                    continue;
+                }
+                if device.viiper_type == "mouse" {
+                    info!(
+                        "connecting mouse device ID {} to VIIPER now that VIIPER is ready",
+                        device.id
+                    );
+                    self.viiper.create_device(device);
+                    continue;
+                }
+                if device.steam_handle != 0 {
+                    info!(
+                        "Connecting device ID {} to VIIPER now that VIIPER is ready",
+                        device.id
+                    );
+                    self.viiper.create_device(device);
+                } else {
+                    info!(
+                        "Skipping device ID {} VIIPER connection; no valid Steam handle",
+                        device.id
+                    );
+                }
+            }
+        }
+    }
 }

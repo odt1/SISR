@@ -314,6 +314,9 @@ impl InputLoop {
                                 super::handler::HandlerEvent::KbmReleaseAll() => {
                                     handler.on_kbm_release_all();
                                 }
+                                super::handler::HandlerEvent::ViiperReady { version } => {
+                                    handler.on_viiper_ready(version);
+                                }
                             }
                             return Ok(false);
                         }

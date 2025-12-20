@@ -1,6 +1,6 @@
+use crate::app::steam_utils::binding_enforcer::binding_enforcer;
 use sdl3::event::Event;
 use tracing::{debug, error, info, trace, warn};
-use crate::app::steam_utils::binding_enforcer::binding_enforcer;
 
 use crate::app::input::{
     device::{Device, DeviceState, SDLDevice},
@@ -221,9 +221,10 @@ impl EventHandler {
                                     .any(|(_, d)| d.steam_handle != 0 && d.viiper_connected);
                                 if !has_any_steam_viiper
                                     && let Ok(mut enforcer) = binding_enforcer().lock()
-                                        && enforcer.is_active() {
-                                            enforcer.deactivate();
-                                        }
+                                    && enforcer.is_active()
+                                {
+                                    enforcer.deactivate();
+                                }
                             }
                         }
                     }

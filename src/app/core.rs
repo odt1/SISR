@@ -417,9 +417,10 @@ The application will now exit.", ||{
 
             let retry_schedule = [
                 std::time::Duration::from_secs(1),
+                std::time::Duration::from_secs(1),
                 std::time::Duration::from_secs(2),
                 std::time::Duration::from_secs(4),
-                std::time::Duration::from_secs(8),
+                std::time::Duration::from_secs(6),
             ];
 
             let client = AsyncViiperClient::new(addr);
@@ -498,6 +499,17 @@ The application will now exit.", ||{
                         }
 
                         info!("VIIPER is ready (version={})", version);
+                        if sdl_waker.lock().ok().and_then(|guard| {
+                            guard.as_ref().and_then(|sender| {
+                                trace!("Notifying SDL input handler of VIIPER readiness");
+                                sender
+                                    .push_custom_event(HandlerEvent::ViiperReady { version })
+                                    .ok()
+                            })
+                        }).is_none()
+                        {
+                            warn!("Failed to notify SDL input handler of VIIPER readiness");
+                        }
                         return;
                     }
                     Err(e) => {
@@ -529,6 +541,7 @@ The application will now exit.", ||{
                                 let log_path =  directories::ProjectDirs::from("", "", "SISR")
                                     .map(|proj_dirs| proj_dirs.data_dir().join("VIIPER.log"));
                                 info!("Starting local VIIPER: {}", viiper_path.display());
+
                                 let mut cmd = Command::new(&viiper_path);
                                 cmd.arg("server");
                                 if let Some(log_path) = &log_path {

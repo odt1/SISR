@@ -12,4 +12,5 @@ pub enum HandlerEvent {
     KbmKeyEvent(kbm_events::KbmKeyEvent),
     KbmPointerEvent(kbm_events::KbmPointerEvent),
     KbmReleaseAll(),
+    ViiperReady { version: String },
 }

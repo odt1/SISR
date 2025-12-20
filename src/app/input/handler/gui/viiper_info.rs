@@ -21,13 +21,6 @@ pub fn draw(
         .open(open)
         .show(ctx, |ui| {
             egui::ScrollArea::both().auto_shrink(false).show(ui, |ui| {
-                // Use the live connection flag — `viiper_device` may still be cached even if the
-                // server disconnected (or we hit network issues).
-                let connected = state.devices.values().any(|d| d.viiper_connected);
-                ui.horizontal_wrapped(|ui| {
-                    ui.label(egui::RichText::new("Connected:").strong());
-                    ui.label(egui::RichText::new(if connected { "Yes" } else { "No" }).weak());
-                });
                 ui.horizontal_wrapped(|ui| {
                     ui.label(egui::RichText::new("VIIPER Address:").strong());
                     ui.label(
@@ -41,6 +34,30 @@ pub fn draw(
                     );
                 });
 
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(egui::RichText::new("VIIPER Available:").strong());
+                    ui.label(
+                        egui::RichText::new(if state.viiper_ready { "true" } else { "false" })
+                            .weak(),
+                    );
+                });
+
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(egui::RichText::new("VIIPER Version:").strong());
+                    ui.label(
+                        egui::RichText::new(state.viiper_version.as_deref().unwrap_or("")).weak(),
+                    );
+                });
+
+                // Use the live connection flag — `viiper_device` may still be cached even if the
+                // server disconnected (or we hit network issues).
+                let connected = state.devices.values().any(|d| d.viiper_connected);
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(egui::RichText::new("Any device(s) connected:").strong());
+                    ui.label(egui::RichText::new(if connected { "true" } else { "false" }).weak());
+                });
+
+                ui.separator();
                 let busses = state
                     .devices
                     .values()
