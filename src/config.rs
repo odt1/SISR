@@ -11,7 +11,7 @@ use tracing::{debug, warn};
 pub static CONFIG: sync::RwLock<Option<Config>> = sync::RwLock::new(None);
 
 #[derive(Parser, Debug, Serialize, Deserialize, Clone)]
-#[command(version, about, long_about = None)]
+#[command(version = option_env!("SISR_VERSION").unwrap_or(env!("CARGO_PKG_VERSION")), about, long_about = None)]
 pub struct Config {
     #[serde(skip)]
     #[arg(
