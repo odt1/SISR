@@ -1,4 +1,4 @@
-<img src="sisr.svg" align="right" width="128"/>
+<img src="SISR.svg" align="right" width="128"/>
 <br />
 
 # SISR ✂️
