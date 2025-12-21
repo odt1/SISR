@@ -23,7 +23,7 @@ sdl3 = { version = "0.16.2", features = ["hidapi"] }
 ctrlc = { version = "3.5.1", features = ["termination"] }
 tray-icon = "0.21.2"
 image = "0.25.9"
-viiper-client = { version = "0.3.0", features = ["async"] }
+viiper-client = { version = "0.3.1", features = ["async"] }
 # viiper-client = { path = "../VIIPER/clients/rust", features = ["async"] }
 anyhow = "1.0.100"
 tokio = { version = "1", features = ["rt-multi-thread", "sync"] }
@@ -66,6 +66,6 @@ serde_json = "1.0.145"
 name = "sisr"
 
 [package.metadata.viiper]
-viiper-version = "0.3.0"
+viiper-version = "0.3.1"
 allow_dev = true
 fetch_prelease = false
