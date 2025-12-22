@@ -94,6 +94,12 @@ fn main() -> ExitCode {
         "VIIPER metadata"
     );
 
+    // ADD ENV TRACE LOGGING HERE!
+    trace!("Environment variables:");
+    for (key, value) in env::vars() {
+        trace!("  {}={}", key, value);
+    }
+
     #[cfg(windows)]
     {
         if config.console.unwrap_or(false) {

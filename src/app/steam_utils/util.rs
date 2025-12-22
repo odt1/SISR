@@ -336,15 +336,33 @@ pub fn load_steam_overlay() {
     }
     #[cfg(target_os = "linux")]
     {
-        steam_overlay_path = steam_overlay_path
-            .parent()
-            .unwrap()
-            .join("bin64")
-            .join("gameoverlayrenderer.so");
+        let parent = steam_overlay_path.parent().unwrap();
+        let ubuntu12_64 = parent.join("ubuntu12_64").join("gameoverlayrenderer.so");
+        let bin64 = parent.join("bin64").join("gameoverlayrenderer.so");
+
+        steam_overlay_path = if ubuntu12_64.exists() {
+            ubuntu12_64
+        } else if bin64.exists() {
+            bin64
+        } else {
+            ubuntu12_64
+        };
+    }
+
+    debug!(
+        "Attempting to load Steam overlay from: {:?}",
+        steam_overlay_path
+    );
+    if !steam_overlay_path.exists() {
+        error!(
+            "Steam overlay library not found at: {:?}",
+            steam_overlay_path
+        );
+        return;
     }
 
     unsafe {
-        match libloading::Library::new(steam_overlay_path) {
+        match libloading::Library::new(&steam_overlay_path) {
             Ok(lib) => {
                 OVERLAY_LIB
                     .write()
