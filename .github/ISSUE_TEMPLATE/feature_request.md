@@ -6,6 +6,11 @@ labels: enhancement
 assignees: ''
 ---
 
+## Pre-flight checklist
+
+- [ ] I have read/searched the documentation
+- [ ] I have searched existing issues to avoid duplicates
+
 ## Is your feature request related to a problem? Please describe
 <!-- A clear and concise description of the problem. Ex. I'm always frustrated when [...] -->
 

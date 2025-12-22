@@ -6,6 +6,11 @@ labels: bug
 assignees: ''
 ---
 
+## Pre-flight checklist
+
+- [ ] I have read/searched the documentation
+- [ ] I have searched existing issues to avoid duplicates
+
 ## Bug Description
 <!-- A clear and concise description of the bug -->
 
@@ -25,6 +30,11 @@ Steps to reproduce the behavior:
 
 ## Screenshots/Logs
 <!-- If applicable, add screenshots or logs to help explain your problem -->
+
+Please attach log files! By default, logs are written to:
+
+- Windows: %APPDATA%\SISR\data\SISR.log
+- Linux: ~/.local/share/SISR/SISR.log
 
 ## Environment
 
