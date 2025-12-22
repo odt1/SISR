@@ -16,6 +16,10 @@
 
 ### ⚙️ VIIPER
 
+=== "Windows"
+
+    VIIPER is bundled with SISR. No separate installation required
+
 === "Linux"
 
     Linux requires VIIPER as a system service:
@@ -28,30 +32,28 @@
 
     For more details, see the [VIIPER documentation](https://alia5.github.io/VIIPER/).
 
-=== "Windows"
-
-    VIIPER is bundled with SISR. No separate installation required.
+.
 
 ## 🚀 Getting SISR running
 
 ### 📦 Download SISR
 
+=== "Windows"
+
+    Download the zip archive for your architecture from the [Downloads](../downloads/index.md) page and extract it to a permanent location  
+    
+    A permanent location is important as SISR creates a marker shortcut in Steam that points to it's location
+
 === "Linux"
 
-    Download the AppImage for your architecture from the [Downloads](../downloads/index.md) page:
-    
-    - `SISR-x86_64.AppImage` for 64-bit Intel/AMD systems
-    - `SISR-aarch64.AppImage` for ARM64 systems
-    
-    Make it executable:
+    Download the AppImage for your architecture from the [Downloads](../downloads/index.md) page
+    and make it executable
     
     ```bash
     chmod +x SISR-x86_64.AppImage
     ```
 
-=== "Windows"
-
-    Download the zip archive for your architecture from the [Downloads](../downloads/index.md) page and extract it to a permanent location
+    Move the file to a permanent location, this is important as SISR creates a marker shortcut in Steam that points to it's location
 
 ### 🎮 First Run
 

@@ -98,10 +98,3 @@ USBIP and VIIPER are not required, only SISR itself
     If you want to stop/start forwarding or change settings while in-game,
     you can toggle the SISR overlay by using the keyboard-shortcut or controller-chord  
     (**`CTRL+SHIFT+ALT+S`**, **`LB+RB+BACK+A`**)
-
-!!! info "Flatpak"
-    There will (_hopefully_) be a Flatpak version of SISR available soon™  
-
-    I personally do not run SteamOS myself and cannot provide more detailed instructions at this time.  
-
-    That said, my source-built version of SISR works perfectly fine on my Arch (btw) install on my Deck, even from Valves Gamescope (Gaming mode)
