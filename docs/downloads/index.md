@@ -1,5 +1,10 @@
 # 📥 Downloads
 
+!!! danger
+    SISR provides easy to use automatic installers for Windows and Linux
+
+    Check the [Installation](../getting-started/installation.md) guide for details instead of downloading manually!
+
 <div class="sisr-download-center" markdown>
 
 [Download latest stable (auto)](#){ .md-button .md-button--primary #sisr-download-stable }
