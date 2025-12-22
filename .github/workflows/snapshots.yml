@@ -110,6 +110,10 @@ jobs:
 
             ⚠️ These are the latest development builds and may contain bugs or unfinished features.
 
+            ⚠️ Installation Scripts available ⚠️ 
+
+            Try reading the [Installation Guide](https://alia5.github.io/SISR/main/getting-started/installation/) before downloading SISR from here!
+
             ${{ needs.generate-changelog.outputs.changelog }}
           files: |
             ./release_files/*

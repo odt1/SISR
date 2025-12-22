@@ -83,6 +83,10 @@ jobs:
                   tag_name: ${{ steps.build_info.outputs.tag_name }}
                   name: "SISR ${{ steps.build_info.outputs.version }}"
                   body: |
+                      # ⚠️ Installation Scripts available ⚠️ 
+
+                      Try reading the [Installation Guide](https://alia5.github.io/SISR/stable/getting-started/installation/) before downloading SISR from here!
+
                       ${{ needs.generate-changelog.outputs.changelog }}
                   files: release_files/*
                   prerelease: false
