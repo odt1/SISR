@@ -159,7 +159,7 @@ Once you have the prerequisites installed, run SISR and follow the dialogs 😉
 3. Create the Steam "marker shortcut"
 
       - Add SISR as a **non-Steam game**
-      - Set the shortcut’s launch options to `--marker`
+      - Set the shortcut's launch options to `--marker`
 
 4. Start/Restart SISR.
 
@@ -172,7 +172,7 @@ Once you have the prerequisites installed, run SISR and follow the dialogs 😉
     SISR uses this shortcut to manage the Steam Input configuration for the emulated controllers and is required for operation  
 
     You can have other launch options as well, just make sure that only **a single** shortcut to SISR with the `--marker` argument exists in your Steam library.  
-    
+
     You can even add multiple SISR shortcuts without `--marker` if you want to have different Steam Input configurations for different games/setups, but those will only work if those shortcuts are launched from Steam directly.  
     See the [GlosSI like usage](../guides/glossi_like.md) guide for more details
 
@@ -182,18 +182,23 @@ and your controller(s) should be available on a system level.
 If you want to change the Steam Input configuration, right click the tray icon and select "Steam Controllerconfig"
 **or** change the Controller config of the `SISR Marker` shortcut in your Steam library
 
-(Note yes, you can rename the shortcut, just make sure to keep the `--marker` argument
+(Note: yes, you can rename the shortcut, just make sure to keep the `--marker` argument
 and that the SISR executable is located at a stable path that does not change between runs)  
+
+!!! tip "SISR Overlay"
+    If you want to stop/start forwarding or change settings while in-game,
+    you can toggle the SISR overlay from the system tray **or** by using the keyboard-shortcut or controller-chord  
+    (**`CTRL+SHIFT+ALT+S`**, **`LB+RB+BACK+A`** _"A" button needs to be pressed last_)
 
 ??? info "CEF Debugging Port"
 
-    SISR uses Steam’s CEF debugging functionality located at port `8080`.  
+    SISR uses Steam's CEF debugging functionality located at port `8080`.  
     _Steam does not provide an easy way to permanently change this port._  
-    If something else is using it (or it’s blocked), SISR may not work as expected.
+    If something else is using it (or it's blocked), SISR may not work as expected.
 
 ## ➡️ Next steps
 
-- Checkout the [Guides](../guides/index.md) for different usage scenarios
+- Checkout the [Guides](../guides/overview/) for different usage scenarios
 - Check [Configuration](../config/config.md) and [CLI Reference](../config/cli.md)
 - Check the [Troubleshooting](../misq/troubleshooting.md) section
 - Read the [FAQ](../misq/faq.md)
