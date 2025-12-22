@@ -43,6 +43,8 @@ that should setup everything you need to get started with SISR quickly
         - **Latest _pre_-release (development snapshot):**  
         `irm https://alia5.github.io/SISR/main/install.ps1 | iex`
 
+    Continue with [Post-Installation](#-post-installation)
+
 === "🐧 Linux"
 
     In a terminal run
@@ -73,6 +75,8 @@ that should setup everything you need to get started with SISR quickly
 
         - **Latest _pre_-release (development snapshot):**  
         `curl -fsSL https://alia5.github.io/SISR/main/install.sh | sh`
+
+    Continue with [Post-Installation](#-post-installation)
 
 ## 📖 Manual Installation
 
@@ -161,13 +165,11 @@ Once you have the prerequisites installed, run SISR and follow the dialogs 😉
 
 ## ℹ️ Post-Installation
 
-!!! info "CEF Debugging Port"
-
-    SISR uses Steam’s CEF debugging functionality located at port `8080`.  
-    _Steam does not provide an easy way to permanently change this port._  
-    If something else is using it (or it’s blocked), SISR may not work as expected.
-
 !!! info "Marker Shortcut"
+
+    SISR may ask you to create the "SISR Marker" shortcut in Steam (if not done already)
+
+    SISR uses this shortcut to manage the Steam Input configuration for the emulated controllers and is required for operation  
 
     You can have other launch options as well, just make sure that only **a single** shortcut to SISR with the `--marker` argument exists in your Steam library.  
     You can even add multiple SISR shortcuts without `--marker` if you want to have different Steam Input configurations for different games/setups, but those will only work if those shortcuts are launched from Steam directly.
@@ -180,6 +182,12 @@ If you want to change the Steam Input configuration, right click the tray icon a
 
 (Note yes, you can rename the shortcut, just make sure to keep the `--marker` argument
 and that the SISR executable is located at a stable path that does not change between runs)  
+
+??? info "CEF Debugging Port"
+
+    SISR uses Steam’s CEF debugging functionality located at port `8080`.  
+    _Steam does not provide an easy way to permanently change this port._  
+    If something else is using it (or it’s blocked), SISR may not work as expected.
 
 ## ➡️ Next steps
 
