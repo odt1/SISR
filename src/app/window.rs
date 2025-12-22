@@ -11,6 +11,7 @@ use egui_wgpu::Renderer as EguiRenderer;
 use egui_wgpu::ScreenDescriptor;
 use egui_winit::State as EguiWinitState;
 use sdl3::event::EventSender;
+use sdl3::sys::mouse::{SDL_HideCursor, SDL_ShowCursor};
 use tracing::{debug, error, info, trace, warn};
 use winit::application::ApplicationHandler;
 use winit::event::{DeviceEvent, WindowEvent};
@@ -215,6 +216,22 @@ impl WindowRunner {
         }
         self.passthrough_active = enable;
         let _ = window.set_cursor_hittest(!enable);
+    }
+
+    fn update_cursor_visibility(&self) {
+        let hide = !self.ui_visible && self.kbm_emulation_enabled.load(Ordering::Relaxed);
+
+        if let Some(window) = &self.window {
+            window.set_cursor_visible(!hide);
+        }
+
+        unsafe {
+            if hide {
+                let _ = SDL_HideCursor();
+            } else {
+                let _ = SDL_ShowCursor();
+            }
+        }
     }
 
     fn draw_ui(dispatcher: &GuiDispatcher, ctx: &Context) {
@@ -540,6 +557,7 @@ impl ApplicationHandler<RunnerEvent> for WindowRunner {
                 warn!("Failed to confine cursor to window: {e}");
             }
         }
+        self.update_cursor_visibility();
 
         self.window_ready.notify_waiters();
         self.window_ready.notify_one();
@@ -571,6 +589,8 @@ impl ApplicationHandler<RunnerEvent> for WindowRunner {
                         }
                     }
 
+                    self.update_cursor_visibility();
+
                     if let Ok(mut guard) = self.window_visible_shared.lock() {
                         *guard = true;
                     }
@@ -585,6 +605,12 @@ impl ApplicationHandler<RunnerEvent> for WindowRunner {
                     debug!("hiding window");
                     _ = window.set_cursor_grab(CursorGrabMode::None);
                     window.set_visible(false);
+
+                    // Restore cursor visibility when window is hidden
+                    window.set_cursor_visible(true);
+                    unsafe {
+                        let _ = SDL_ShowCursor();
+                    }
 
                     if let Ok(mut guard) = self.window_visible_shared.lock() {
                         *guard = false;
@@ -613,6 +639,7 @@ impl ApplicationHandler<RunnerEvent> for WindowRunner {
                             warn!("Failed to confine cursor to window: {e}");
                         }
                     }
+                    self.update_cursor_visibility();
                     if self.fullscreen && !self.pre_dialog_window_visible {
                         window.set_visible(false);
                         if let Ok(mut guard) = self.window_visible_shared.lock() {
@@ -627,6 +654,8 @@ impl ApplicationHandler<RunnerEvent> for WindowRunner {
                     self.set_passthrough(false);
                     _ = window.set_cursor_grab(CursorGrabMode::None);
                     self.try_push_kbm_event(HandlerEvent::KbmReleaseAll());
+                    // Show cursor again when UI becomes visible
+                    self.update_cursor_visibility();
                     if !self.pre_dialog_window_visible {
                         window.set_visible(true);
                         if let Ok(mut guard) = self.window_visible_shared.lock() {
@@ -652,6 +681,7 @@ impl ApplicationHandler<RunnerEvent> for WindowRunner {
                 if let Err(e) = window.set_cursor_grab(CursorGrabMode::Confined) {
                     warn!("Failed to confine cursor to window: {e}");
                 }
+                self.update_cursor_visibility();
                 window.request_redraw();
             }
             RunnerEvent::SetKbmCursorGrab(enabled) => {
@@ -673,6 +703,7 @@ impl ApplicationHandler<RunnerEvent> for WindowRunner {
                     } else {
                         _ = window.set_cursor_grab(CursorGrabMode::None);
                     }
+                    self.update_cursor_visibility();
                 } else if let Err(e) = window.set_cursor_grab(CursorGrabMode::Confined) {
                     warn!("Failed to confine cursor to window: {e}");
                 }
@@ -948,6 +979,10 @@ impl Drop for WindowRunner {
                 "Clipboard worker thread panicked during cleanup (expected on shutdown): {:?}",
                 e
             );
+        }
+
+        unsafe {
+            let _ = SDL_ShowCursor();
         }
 
         drop(self.egui_renderer.take());
