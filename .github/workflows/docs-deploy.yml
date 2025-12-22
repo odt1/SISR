@@ -34,6 +34,39 @@ jobs:
               run: |
                   pip install mkdocs-material mike
 
+            - name: Inject version into install scripts
+              run: |
+                  # Extract VIIPER version from Cargo.toml
+                  VIIPER_VERSION=$(grep -E '^viiper-version = ' Cargo.toml | sed -E 's/.*= "([^"]+)".*/\1/')
+                  FETCH_PRERELEASE=$(grep -E '^fetch_prelease = ' Cargo.toml | sed -E 's/.*= (true|false).*/\1/')
+
+                  echo "Extracted VIIPER version from Cargo.toml: $VIIPER_VERSION"
+                  echo "Fetch prerelease: $FETCH_PRERELEASE"
+
+                  if [[ "$FETCH_PRERELEASE" == "true" ]]; then
+                    VIIPER_VERSION="dev-snapshot"
+                    echo "Using dev-snapshot for VIIPER (fetch_prelease=true)"
+                  fi
+
+                  sed -i "s/VIIPER_VERSION=\"dev-snapshot\"/VIIPER_VERSION=\"$VIIPER_VERSION\"/" scripts/install.sh
+                  sed -i "s/\\\$viiperVersion = \"dev-snapshot\"/\\\$viiperVersion = \"$VIIPER_VERSION\"/" scripts/install.ps1
+
+                  if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+                    TAG_NAME=${GITHUB_REF#refs/tags/}
+                    VERSION=${TAG_NAME#v}
+                    
+                    if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+                      echo "Injecting SISR version: $TAG_NAME into install scripts"
+                      sed -i "s/SISR_VERSION=\"dev-snapshot\"/SISR_VERSION=\"$TAG_NAME\"/" scripts/install.sh
+                      sed -i "s/\\\$sisrVersion = \"dev-snapshot\"/\\\$sisrVersion = \"$TAG_NAME\"/" scripts/install.ps1
+                    fi
+                  fi
+
+            - name: Copy installation scripts to docs
+              run: |
+                  cp scripts/install.sh docs/install.sh
+                  cp scripts/install.ps1 docs/install.ps1
+
             - name: Generate changelog for main
               if: github.ref == 'refs/heads/main'
               run: |

@@ -32,8 +32,6 @@
 
     For more details, see the [VIIPER documentation](https://alia5.github.io/VIIPER/).
 
-.
-
 ## 🚀 Getting SISR running
 
 ### 📦 Download SISR
@@ -41,7 +39,7 @@
 === "Windows"
 
     Download the zip archive for your architecture from the [Downloads](../downloads/index.md) page and extract it to a permanent location  
-    
+
     A permanent location is important as SISR creates a marker shortcut in Steam that points to it's location
 
 === "Linux"
