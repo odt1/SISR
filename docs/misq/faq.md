@@ -93,6 +93,43 @@ See the [VIIPER documentation](https://alia5.github.io/VIIPER/) for more details
 
 For common issues (doubled controllers, Steam CEF debugging, port conflicts, etc.), see: [Troubleshooting](troubleshooting.md)
 
+## How do I uninstall this?
+
+The installation scripts as well as the documentation tell you what is happening during install.  
+To uninstall reverse those steps.  
+
+=== "Windows"
+
+    If you cant be bothered, run this in PowerShell
+
+    ```powershell
+    rm -rf "$env:LOCALAPPDATA\SISR"
+    rm -rf "$env:LOCALAPPDATA\VIIPER"
+    Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "VIIPER" -ErrorAction SilentlyContinue
+    Remove-Item "$( [Environment]::GetFolderPath('Desktop') )\SISR.lnk" -ErrorAction SilentlyContinue
+    Remove-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\SISR.lnk" -ErrorAction SilentlyContinue
+    ```
+    
+    ??? info inline end "Driver Removal"
+        ![Device Manager Driver Removal](../assets/usbip-uninstall.gif)
+
+    The USBIP-Win2 driver can be removed via Device Manager
+
+=== "Linux"
+
+    If you cant be bothered, run this in a terminal
+
+    ```bash
+    rm -rf ~/.local/share/SISR
+    rm -rf ~/.local/share/VIIPER
+    sudo systemctl disable --now viiper.service
+    sudo rm /etc/systemd/system/viiper.service
+    sudo systemctl daemon-reload
+    sudo rm -rf /etc/modules-load.d/viiper.conf
+    ```
+
+    USBIP can be uninstalled via whatever package manager your distribution uses
+
 ## I want feature XYZ
 
 Check [GitHub Issues](https://github.com/Alia5/SISR/issues) to see if it's already requested  
