@@ -109,6 +109,12 @@ USBIP and VIIPER are not required, only SISR itself
       <sup>show-window, fullscreen, continuous drawing, keyboard/mouse emulation, other machine address</sup>  
 <br />
 
+??? info "Click to reveal screenshot"
+    ![Example Deck Controller Shortcut](../assets/deck-controller-shortcut.png)  
+    Example Steam shortcut for using a Steam Deck as a dedicated controller
+
+<br />
+
 !!! tip inline end "Multiple Configurations"
     You can add SISR multiple times as non-Steam game to have multiple different Steam Input configurations available!
 
