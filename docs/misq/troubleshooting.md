@@ -1,187 +1,334 @@
 # Troubleshooting
 
-## 🎮 Controller Issues
+<style>
+    .md-typeset details.question {
+        border-color: rgba(128, 128, 128, 0.33);
+        &:focus-within {
+            box-shadow: 0 0 0 .2rem #448aff1a;
+        }
+        & summary {
+            background: transparent;
+            &::before {
+                color: #227399a9;
+                background-color: #227399a9;
+                outline: transparent;
+            }
+            &::before:focus,
+            &::before:focus-visible {
+                outline: transparent;
+                box-shadow: transparent;
+            }
+            &::after {
+                color: var(--md-default-fg-color);
+            }
+        }
+    }
+    .toc-anchor {
+        position: absolute;
+        opacity: 0;
+        overflow: hidden;
+        width: 0;
+        height: 0;
+        padding: 0;
+        margin: 0 !important;
+        pointer-events: none;
+    }
+ </style>
 
-### Doubled controllers / One physical controller controls multiple emulated controllers
+ <script>
+(()=>{
+    const open=(hash)=>{
+        if(!hash||hash==="#")return;
+        const h=document.getElementById(hash.slice(1));
+        let n=h?.nextElementSibling;
+        while(n){
+            if(/^H[1-6]$/.test(n.tagName)) break;
+            if(n.tagName==="DETAILS"){n.open=true;break;}
+            n=n.nextElementSibling;
+        }
+    };
+    let last="";
+    const tick=()=>{const h=location.hash;if(h!==last){last=h;open(h);}requestAnimationFrame(tick);};
+    requestAnimationFrame(tick);
+})();
+</script>
 
-You can try one of the two following things:
+<div class="grid cards" markdown>
 
-1. Ensure that in the Steam Controller configurator for SISR,
-the controller order uses your "real" controllers **before any emulated controllers**  
+- **Controller Issues**
 
-2. Turn off "Enable Steam Input for Xbox controllers" in Steam settings.  
-Otherwise Steam will pass through the emulated controller to SISR, which will then create another virtual  
-controller, which will be passed to Steam, which will it pass to SISR, which will then create another virtual  
-controller, which will be passed to Steam, which will it pass to SISR, which will then create another virtual
-controller, which will be passed to Steam, which will it pass to SISR, which will then create another virtual
-controller, which will be passed to Steam, which will it pass to SISR, which will then create another virtual
-controller, which will be passed to Steam, which will it pass to SISR, which will then create another virtual
-controller, which will be passed to Steam, which will it pass to SISR, which will then create another virtual
-controller, which will be passed to Steam, which will it pass to SISR, which will then create another virtual
-controller, which will be passed to Steam, which will it pass to SISR, which will then create another virtual
-controller, which will be passed to Steam, which will it pass to SISR, which will then create another virtual
-controller, which will be passed to Steam, which will it pass to SISR.
+    ---
 
-!!! info "Controller identification"
-    Steams "Identify Controllers" feature (available when re-ordering controller **in Steam**) will
-    help you differentiate physical and emulated controllers
+    Problems with controller detection, doubling, and game compatibility
 
-### My game still detects my real PS4/DualSense/Nintendo controller
+    [Jump to section](#controller-issues)
 
-Install and use [HidHide](https://github.com/nefarius/HidHide) to hide your physical controllers from games  
-Keep the visible to Steam and SISR  
-_How?_ **RTFM**...
+- **UI / Window Issues**
 
-!!! info "HidHide setup"
-    Automatic HidHide integration will maybe follow  
-    soon™
+    ---
 
-### Game doesn't recognize the controller
+    Window visibility, overlay problems, and mouse capture
 
-Does the game work with regular, real, Xbox 360 controllers?  
+    [Jump to section](#ui-window-issues)
 
-- If yes, you are doing it wrong  
-- If no, tough luck
+- **VIIPER Issues**
 
-### Touch/Radial menus do not work
+    ---
 
-By default, SISR will **not** draw continuously, which prevents touch/radial menus from showing up  
-To make touch/radial menus show up, you can add the `--wcd true` launch option to enable continuous drawing  
+    Connection problems, version mismatches, and USBIP setup
 
-This can also circumvent issues with the Steam overlay not showing up correctly.
+    [Jump to section](#viiper-issues)
 
-**Do note that this may increase CPU/GPU usage** and
-can potentially negatively affect gaming performance on lower end systems
+- **Steam Integration**
 
-### My controller doesn't work properly when SISR is running and I launch a game from Steam
+    ---
 
-SISR is meant as supporting-tools for games/applications **outside of Steam** that do not support Steam Input properly.
+    Marker shortcuts, CEF debugging, and port conflicts
 
-Just disable/exit SISR before running your regular (working with Steam Input) games...
+    [Jump to section](#steam-integration)
 
-Steam game launch detection is **not yet implemented**.
+- **Keyboard/Mouse Emulation**
 
-## 🪟 UI / Window issues
+    ---
 
-### I can't see the UI / The UI doesn't show up
+    KB/M emulation configuration and troubleshooting
 
-- It's a system tray app. Right-click the tray icon to toggle the UI (among other things)
-- Or launch with `-w --window-fullscreen false` to show the window at startup
-- **If** the window runs **as overlay** press **`Ctrl+Shift+Alt+S`**
-  or **`LB+RB+BACK+A`** (_A button needs to be pressed last_) to toggle UI visibility.
+    [Jump to section](#keyboard-mouse-emulation)
 
-### I have toggled the UI but now I can't get rid of it
+- **Performance**
 
-- Press **`Ctrl+Shift+Alt+S`** or **`LB+RB+BACK+A`** (_"A" button needs to be pressed last_) again to toggle UI visibility
+    ---
 
-### My mouse is captured by the overlay and I can't interact with other windows
+    Input lag, latency issues, and optimization tips
 
-- Press **`Ctrl+Shift+Alt+S`** or **`LB+RB+BACK+A`** (_"A" button needs to be pressed last_) to toggle UI visibility
+    [Jump to section](#performance)
 
-## 🐍 VIIPER Issues
+</div>
 
-### SISR says VIIPER is unavailable
+---
 
-1. Is VIIPER running?  
-    Start manually: `viiper server`
-2. Is `viiper` / `viiper.exe` next to SISR?
-    SISR tries to auto-start it if not already running as a service and the viiper-address is set to `localhost`
-3. Firewall blocking the connection?  
-    Allow VIIPER through your firewall
-4. Correct address?  
-    Default is `localhost:3242`. Change with `--viiper-address`
-5. **If** using remote VIIPER: Is the remote machine reachable?  
-    Try pinging it
+## 🎮 Controller Issues {#controller-issues}
 
-### VIIPER version too old
+### Doubled controllers / One physical controller controls multiple emulated controllers {.toc-anchor}
 
-SISR enforces a minimum VIIPER version  
-VIIPER should come bundled with SISR, so this should not happen
+??? question "Doubled controllers / One physical controller controls multiple emulated controllers"
 
-If you see this error, you likely use VIIPER on another machine or have VIIPER running as a service
-In any case check the [VIIPER Documentation](https://alia5.github.io/VIIPER/) for update instructions
+    You can try one of the two following things:
 
-### USBIP attach fails
+    1. Ensure that in the Steam Controller configurator for SISR,
+    the controller order uses your "real" controllers **before any emulated controllers**  
 
-Ensure you have USBIP set up correctly  
-See [USBIP setup](../getting-started/usbip.md)
+    2. Turn off "Enable Steam Input for Xbox controllers" in Steam settings.  
+    Otherwise Steam will pass through the emulated controller to SISR, which will then create another virtual  
+    controller, which will be passed to Steam, which will it pass to SISR, which will then create another virtual  
+    controller, which will be passed to Steam, which will it pass to SISR, which will then create another virtual
+    controller, which will be passed to Steam, which will it pass to SISR, which will then create another virtual
+    controller, which will be passed to Steam, which will it pass to SISR, which will then create another virtual
+    controller, which will be passed to Steam, which will it pass to SISR, which will then create another virtual
+    controller, which will be passed to Steam, which will it pass to SISR, which will then create another virtual
+    controller, which will be passed to Steam, which will it pass to SISR, which will then create another virtual
+    controller, which will be passed to Steam, which will it pass to SISR, which will then create another virtual
+    controller, which will be passed to Steam, which will it pass to SISR, which will then create another virtual
+    controller, which will be passed to Steam, which will it pass to SISR.
 
-## 🚂 Steam Integration
+    !!! info "Controller identification"
+        Steams "Identify Controllers" feature (available when re-ordering controller **in Steam**) will
+        help you differentiate physical and emulated controllers
 
-### SISR marker not found
+### My game still detects my real PS4/DualSense/Nintendo controller {.toc-anchor}
 
-SISR reports the marker shortcut is missing.
+??? question "My game still detects my real PS4/DualSense/Nintendo controller"
 
-Create it manually:
+    Install and use [HidHide](https://github.com/nefarius/HidHide) to hide your physical controllers from games  
+    Keep the visible to Steam and SISR  
+    _How?_ **RTFM**...
 
-1. Add SISR as a **non-Steam Game** in Steam
-2. Set launch options to `--marker`
-3. Restart Steam and SISR
+    !!! info "HidHide setup"
+        Automatic HidHide integration will maybe follow  
+        soon™
 
-See [Installation](../getting-started/installation.md)
+### Game doesn't recognize the controller {.toc-anchor}
 
-### Port 8080 conflicts / CEF debugging is enabled, but SISR could not reach it
+??? question "Game doesn't recognize the controller"
 
-As do other popular tools, SISR uses the CEF-Debugging option provided by Steam  
-and Valve decided to default that to port 8080 (_without an easy way to change this permanently_)
+    Does the game work with regular, real, Xbox 360 controllers?  
 
-Stop the conflicting service/program ¯\\\_(ツ)\_/¯  
+    - If yes, you are doing it wrong  
+    - If no, tough luck
 
-### Steam installation could not be found
+### Touch/Radial menus do not work {.toc-anchor}
 
-Ensure Steam is installed and the installation directory exists  
-On Windows, check the registry entry for Steam  
+??? question "Touch/Radial menus do not work"
 
-You can also specify the path explicitly with `--steam-path`
+    By default, SISR will **not** draw continuously, which prevents touch/radial menus from showing up  
+    To make touch/radial menus show up, you can add the `--wcd true` launch option to enable continuous drawing  
 
-### Failed to create CEF debug enable file in Steam directory
+    This can also circumvent issues with the Steam overlay not showing up correctly.
 
-SISR couldn't write to the Steam directory (permissions issue, antivirus, etc.)
+    **Do note that this may increase CPU/GPU usage** and
+    can potentially negatively affect gaming performance on lower end systems
 
-Manually create the file `.cef-enable-remote-debugging` in your Steam installation directory  
-See [Installation](../getting-started/installation.md)
+### My controller doesn't work properly when SISR is running and I launch a game from Steam {.toc-anchor}
 
-### Failed to restart Steam
+??? question "My controller doesn't work properly when SISR is running and I launch a game from Steam"
 
-SISR couldn't restart Steam automatically via `steam://` URL scheme
-Restart Steam manually, then restart SISR
+    SISR is meant as supporting-tools for games/applications **outside of Steam** that do not support Steam Input properly.
 
-### SISR says the overlay notfier could not be initialized
+    Just disable/exit SISR before running your regular (working with Steam Input) games...
 
-Just tap "_Yes_" or pass `--wcd true` as launch options.
+    Steam game launch detection is **not yet implemented**.
 
-### This doesn't work with "Steam Link" / "Remote Play"
+## 🪟 UI / Window issues {#ui-window-issues}
 
-**The short answer:** Don't use SISR with Steam Link / Remote Play.
+### I can't see the UI / The UI doesn't show up {.toc-anchor}
 
-The long answer: Don't use SISR with Steam Link / Remote Play.  
-Look into setting up Sunshine/Apollo and Moonlight instead.  
+??? question "I can't see the UI / The UI doesn't show up"
 
-Note that Sunshine/Apollo and Moonlight come with their own remote-input solution, that possibly interferes with SISR.  
-I have not yet had the time to write documentation for this  
-<sup>If you have used SISR with Sunshine/Apollo and Moonlight successfully, consider contributing to the documentation</sup>
+    It's a system tray app. Right-click the tray icon to toggle the UI (among other things)
+    **Or** launch with `-w --window-fullscreen false` to show the window at startup
+    **If** the window runs **as overlay** press **`Ctrl+Shift+Alt+S`**
+        or **`LB+RB+BACK+A`** (_A button needs to be pressed last_) to toggle UI visibility.
 
-## ⌨️🖱️ Keyboard/Mouse Emulation
+### I have toggled the UI but now I can't get rid of it {.toc-anchor}
 
-### KB/M emulation is disabled
+??? question "I have toggled the UI but now I can't get rid of it"
 
-SISR disables KB/M emulation on **localhost/loopback** as it makes no sense there  
+    Press **`Ctrl+Shift+Alt+S`** or **`LB+RB+BACK+A`** (_"A" button needs to be pressed last_) again to toggle UI visibility
 
-To enable: Run VIIPER on a different machine and run SISR with `--viiper-address=<remote-ip>:3242 --keyboard-mouse-emulation=true`
+### My mouse is captured by the overlay and I can't interact with other windows {.toc-anchor}
 
-## 🏎️ Performance
+??? question "My mouse is captured by the overlay and I can't interact with other windows"
 
-### Input lag
+    Press **`Ctrl+Shift+Alt+S`** or **`LB+RB+BACK+A`** (_"A" button needs to be pressed last_) to toggle UI visibility
 
-Check:
+## 🐍 VIIPER Issues {#viiper-issues}
 
-- Network latency (if using remote VIIPER): ping the host
-- System performance: CPU/GPU usage, background processes
-- Game settings: V-sync, frame rate limits
+### SISR says VIIPER is unavailable {.toc-anchor}
 
-!!! info
-    USBIP/VIIPER do **not** introduce significant latency  
-    See [VIIPER benchmarks](https://alia5.github.io/VIIPER/main/testing/e2e_latency/)
+??? question "SISR says VIIPER is unavailable"
+
+    1. Is VIIPER running?  
+        Start manually: `viiper server`
+    2. Is `viiper` / `viiper.exe` next to SISR?
+        SISR tries to auto-start it if not already running as a service and the viiper-address is set to `localhost`
+    3. Firewall blocking the connection?  
+        Allow VIIPER through your firewall
+    4. Correct address?  
+        Default is `localhost:3242`. Change with `--viiper-address`
+    5. **If** using remote VIIPER: Is the remote machine reachable?  
+        Try pinging it
+
+### VIIPER version too old {.toc-anchor}
+
+??? question "VIIPER version too old"
+
+    SISR enforces a minimum VIIPER version  
+    VIIPER should come bundled with SISR, so this should not happen
+
+    If you see this error, you likely use VIIPER on another machine or have VIIPER running as a service
+    In any case check the [VIIPER Documentation](https://alia5.github.io/VIIPER/) for update instructions
+
+### USBIP attach fails {.toc-anchor}
+
+??? question "USBIP attach fails"
+
+    Ensure you have USBIP set up correctly  
+    See [USBIP setup](../getting-started/usbip.md)
+
+## 🚂 Steam Integration {#steam-integration}
+
+### SISR marker not found {.toc-anchor}
+
+??? question "SISR marker not found"
+
+    SISR reports the marker shortcut is missing.
+
+    Create it manually:
+
+    1. Add SISR as a **non-Steam Game** in Steam
+    2. Set launch options to `--marker`
+    3. Restart Steam and SISR
+
+    See [Installation](../getting-started/installation.md)
+
+### Port 8080 conflicts / CEF debugging is enabled, but SISR could not reach it {.toc-anchor}
+
+??? question "Port 8080 conflicts / CEF debugging is enabled, but SISR could not reach it"
+
+    As do other popular tools, SISR uses the CEF-Debugging option provided by Steam  
+    and Valve decided to default that to port 8080 (_without an easy way to change this permanently_)
+
+    Stop the conflicting service/program ¯\\\_(ツ)\_/¯  
+
+### Steam installation could not be found {.toc-anchor}
+
+??? question "Steam installation could not be found"
+
+    Ensure Steam is installed and the installation directory exists  
+    On Windows, check the registry entry for Steam  
+
+    You can also specify the path explicitly with `--steam-path`
+
+### Failed to create CEF debug enable file in Steam directory {.toc-anchor}
+
+??? question "Failed to create CEF debug enable file in Steam directory"
+
+    SISR couldn't write to the Steam directory (permissions issue, antivirus, etc.)
+
+    Manually create the file `.cef-enable-remote-debugging` in your Steam installation directory  
+    See [Installation](../getting-started/installation.md)
+
+### Failed to restart Steam {.toc-anchor}
+
+??? question "Failed to restart Steam"
+
+    SISR couldn't restart Steam automatically via `steam://` URL scheme
+    Restart Steam manually, then restart SISR
+
+### SISR says the overlay notfier could not be initialized {.toc-anchor}
+
+??? question "SISR says the overlay notfier could not be initialized"
+
+    Just tap "_Yes_" or pass `--wcd true` as launch options.
+
+### This doesn't work with "Steam Link" / "Remote Play" {.toc-anchor}
+
+??? question "This doesn't work with "Steam Link" / "Remote Play""
+
+    **The short answer:** Don't use SISR with Steam Link / Remote Play.
+
+    The long answer: Don't use SISR with Steam Link / Remote Play.  
+    Look into setting up Sunshine/Apollo and Moonlight instead.  
+
+    Note that Sunshine/Apollo and Moonlight come with their own remote-input solution, that possibly interferes with SISR.  
+    I have not yet had the time to write documentation for this  
+    <sup>If you have used SISR with Sunshine/Apollo and Moonlight successfully, consider contributing to the documentation</sup>
+
+## ⌨️🖱️ Keyboard/Mouse Emulation {#keyboard-mouse-emulation}
+
+### KB/M emulation is disabled {.toc-anchor}
+
+??? question "KB/M emulation is disabled"
+
+    SISR disables KB/M emulation on **localhost/loopback** as it makes no sense there  
+
+    To enable: Run VIIPER on a different machine and run SISR with `--viiper-address=<remote-ip>:3242 --keyboard-mouse-emulation=true`
+
+## 🏎️ Performance {#performance}
+
+### Input lag {.toc-anchor}
+
+??? question "Input lag"
+
+    Check:
+
+    - Network latency (if using remote VIIPER): ping the host
+    - System performance: CPU/GPU usage, background processes
+    - Game settings: V-sync, frame rate limits
+
+    !!! info
+        USBIP/VIIPER do **not** introduce significant latency  
+        See [VIIPER benchmarks](https://alia5.github.io/VIIPER/main/testing/e2e_latency/)
 
 ## Still stuck? 🙄
 

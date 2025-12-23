@@ -1,144 +1,215 @@
 # FAQ
 
-## Where's the GUI?
+<style>
+    .md-typeset details.question {
+        border-color: rgba(128, 128, 128, 0.33);
+        &:focus-within {
+            box-shadow: 0 0 0 .2rem #448aff1a;
+        }
+        & summary {
+            background: transparent;
+            &::before {
+                color: #227399a9;
+                background-color: #227399a9;
+                outline: transparent;
+            }
+            &::before:focus,
+            &::before:focus-visible {
+                outline: transparent;
+                box-shadow: transparent;
+            }
+            &::after {
+                color: var(--md-default-fg-color);
+            }
+        }
+    }
+    .toc-anchor {
+        position: absolute;
+        opacity: 0;
+        overflow: hidden;
+        width: 0;
+        height: 0;
+        padding: 0;
+        margin: 0 !important;
+        pointer-events: none;
+    }
+ </style>
 
-SISR runs as a **system tray application** by default.
+ <script>
+(()=>{
+    const open=(hash)=>{
+        if(!hash||hash==="#")return;
+        const h=document.getElementById(hash.slice(1));
+        let n=h?.nextElementSibling;
+        while(n){
+            if(/^H[1-6]$/.test(n.tagName)) break;
+            if(n.tagName==="DETAILS"){n.open=true;break;}
+            n=n.nextElementSibling;
+        }
+    };
+    let last="";
+    const tick=()=>{const h=location.hash;if(h!==last){last=h;open(h);}requestAnimationFrame(tick);};
+    requestAnimationFrame(tick);
+})();
+</script>
 
-- Right-click the tray icon to show/hide the UI
-- Or launch with `-w --window-fullscreen false` to show the window at startup
-- **If** the window runs **as overlay** press **`Ctrl+Shift+Alt+S`**
-  or **`LB+RB+BACK+A`** (_"A" button needs to be pressed last_) to toggle UI visibility.
+## Where's the GUI? {.toc-anchor}
 
-You can also run `sisr --help` to see all CLI options
+??? question "Where's the GUI?"
 
-## I don't like the system tray app behavior, can I run it as a normal windowed application?
+    SISR runs as a **system tray application** by default.
 
-Yes, you can!  
-Launch SISR with `-w --window-fullscreen false` to show the window at startup and disable fullscreen behavior
+    - Right-click the tray icon to show/hide the UI
+    - Or launch with `-w --window-fullscreen false` to show the window at startup
+    - **If** the window runs **as overlay** press **`Ctrl+Shift+Alt+S`**
+    or **`LB+RB+BACK+A`** (_"A" button needs to be pressed last_) to toggle UI visibility.
 
-## I don't like the chosen overlay shortcut/controller chord, can I change it?
+    You can also run `sisr --help` to see all CLI options
 
-You do realize Steam Input can remap controller buttons/shortcuts, right?  
-You're smart, you can figure it out 😜
+## I don't like the system tray app behavior, can I run it as a normal windowed application? {.toc-anchor}
 
-## Why would I use this over Steam Input directly?
+??? question "I don't like the system tray app behavior, can I run it as a normal windowed application?"
 
-SISR can be used to circumvent issues with games and applications that
-do not support Steam Input or otherwise pose challenges, like (but not limited to):
+    Yes, you can!  
+    Launch SISR with `-w --window-fullscreen false` to show the window at startup and disable fullscreen behavior
 
-- Games with aggressive anti-cheat systems
-- Emulators
-- Windows Store games/apps
-- Games with broken Steam Input support
+## I don't like the chosen overlay shortcut/controller chord, can I change it? {.toc-anchor}
 
-You can also use SISR to "tunnel"/forward
-Steam Input configurations over the network to other machines, including Keyboard/Mouse.  
+??? question "I don't like the chosen overlay shortcut/controller chord, can I change it?"
 
-This makes it possible to use devices like a Steam Deck as a dedicated controller
-without the need to stream the entire game
+    You do realize Steam Input can remap controller buttons/shortcuts, right?  
+    You're smart, you can figure it out 😜
 
-!!! info
-    That said, if you do not have issues with Steam Input directly, you probably should not use SISR at all 😉
+## Why would I use this over Steam Input directly? {.toc-anchor}
 
-## Can I use this with "Steam Link" / "Remote Play"
+??? question "Why would I use this over Steam Input directly?"
 
-Theoretically(?)
-But practically don't expect it to work or be a good experience.  
+    SISR can be used to circumvent issues with games and applications that
+    do not support Steam Input or otherwise pose challenges, like (but not limited to):
 
-Look into setting up Sunshine/Apollo and Moonlight instead!  
-Note that Sunshine/Apollo and Moonlight come with their own remote-input solution, that possibly interferes with SISR.  
-I have not yet had the time to write documentation for this  
-<sup>If you have used SISR with Sunshine/Apollo and Moonlight successfully, consider contributing to the documentation</sup>
+    - Games with aggressive anti-cheat systems
+    - Emulators
+    - Windows Store games/apps
+    - Games with broken Steam Input support
 
-## Why would I want to use this instead of _directly_ using USBIP/VirtualHere to forward controllers?
+    You can also use SISR to "tunnel"/forward
+    Steam Input configurations over the network to other machines, including Keyboard/Mouse.  
 
-Diretly forwarding the Steam Decks (or similar devices) inputs via USBIP/VirtualHere comes with significant drawbacks:
+    This makes it possible to use devices like a Steam Deck as a dedicated controller
+    without the need to stream the entire game
 
-- The forwarded device is entirely "removed" from the host machine  
-    - You cannot use the device on the host machine at all while it's forwarded
-    - There may be no way to "exit" the forwarding on the host machine without additional input devices or remote access,
-    you have to disconnect the USBIP/VirtualHere session from the client side  
-    This can be especially problematic if the host machine is a Steam Deck...
-- USBIP on Windows specifically does not _currently_ work with the Steam Decks built-in controller
-- VirtualHere is closed-source and requires a paid license for more than a single device
-- I have personally experienced significant latency and input issues
-  when using VirtualHere specifically on long gaming sessions
-- On the Steam Deck (or similar devices), the Touchscreens inputs cannot be forwarded via USBIP/VirtualHere at all
+    !!! info
+        That said, if you do not have issues with Steam Input directly, you probably should not use SISR at all 😉
 
-SISR circumvents all of these issues by:
+## Can I use this with "Steam Link" / "Remote Play" {.toc-anchor}
 
-- Forwarding Steams Virtual Controllers instead of the physical device
-- Forward additional Keyboard/Mouse devices alongside the controllers
-- Providing "_an out_" using it's dedicated shortcut/controller chord (**`CTRL+SHIFT+ALT+S`**, **`LB+RB+BACK+A`**)
-  to toggle the UI visibility and stop/start forwarding
-- Being fully open-source and free to use  
-   Even if a feature is not supported, everyone can grab the source-code
-   of any part in the chain (except Steam itself) and implement it 😉
+??? question "Can I use this with "Steam Link" / "Remote Play"?"
 
-## What is USBIP?
+    Theoretically(?)
+    But practically don't expect it to work or be a good experience.  
 
-**USBIP** is a protocol for tunneling USB devices over TCP/IP  
-It allows a USB device on one machine to appear on another machine over the network (or localhost).
+    Look into setting up Sunshine/Apollo and Moonlight instead!  
+    Note that Sunshine/Apollo and Moonlight come with their own remote-input solution, that possibly interferes with SISR.  
+    I have not yet had the time to write documentation for this  
+    <sup>If you have used SISR with Sunshine/Apollo and Moonlight successfully, consider contributing to the documentation</sup>
 
-SISR uses USBIP (via [VIIPER](https://alia5.github.io/VIIPER/)) to create emulated controllers
-that appear as real hardware at the system level
+## Why would I want to use this instead of _directly_ using USBIP/VirtualHere to forward controllers? {.toc-anchor}
 
-See [USBIP setup](../getting-started/usbip.md) for setup instructions
+??? question "Why would I want to use this instead of _directly_ using USBIP/VirtualHere to forward controllers?"
 
-## What is VIIPER?
+    Diretly forwarding the Steam Decks (or similar devices) inputs via USBIP/VirtualHere comes with significant drawbacks:
 
-VIIPER (**V**irtual **I**nput over **IP** **E**mulato**R**) is the USBIP server that SISR uses to emulate controllers.
+    - The forwarded device is entirely "removed" from the host machine  
+        - You cannot use the device on the host machine at all while it's forwarded
+        - There may be no way to "exit" the forwarding on the host machine without additional input devices or remote access,
+        you have to disconnect the USBIP/VirtualHere session from the client side  
+        This can be especially problematic if the host machine is a Steam Deck...
+    - USBIP on Windows specifically does not _currently_ work with the Steam Decks built-in controller
+    - VirtualHere is closed-source and requires a paid license for more than a single device
+    - I have personally experienced significant latency and input issues
+    when using VirtualHere specifically on long gaming sessions
+    - On the Steam Deck (or similar devices), the Touchscreens inputs cannot be forwarded via USBIP/VirtualHere at all
 
-**VIIPER is bundled with SISR**  
-you don't need to download/setup it separately  
+    SISR circumvents all of these issues by:
 
-VIIPER listens on:
+    - Forwarding Steams Virtual Controllers instead of the physical device
+    - Forward additional Keyboard/Mouse devices alongside the controllers
+    - Providing "_an out_" using it's dedicated shortcut/controller chord (**`CTRL+SHIFT+ALT+S`**, **`LB+RB+BACK+A`**)
+    to toggle the UI visibility and stop/start forwarding
+    - Being fully open-source and free to use  
+    Even if a feature is not supported, everyone can grab the source-code
+    of any part in the chain (except Steam itself) and implement it 😉
 
-- `:3241` for USBIP connections
-- `:3242` for the control API
+## What is USBIP? {.toc-anchor}
 
-See the [VIIPER documentation](https://alia5.github.io/VIIPER/) for more details
+??? question "What is USBIP?"
+
+    **USBIP** is a protocol for tunneling USB devices over TCP/IP  
+    It allows a USB device on one machine to appear on another machine over the network (or localhost).
+
+    SISR uses USBIP (via [VIIPER](https://alia5.github.io/VIIPER/)) to create emulated controllers
+    that appear as real hardware at the system level
+
+    See [USBIP setup](../getting-started/usbip.md) for setup instructions
+
+## What is VIIPER? {.toc-anchor}
+
+??? question "What is VIIPER?"
+
+    VIIPER (**V**irtual **I**nput over **IP** **E**mulato**R**) is the USBIP server that SISR uses to emulate controllers.
+
+    **VIIPER is bundled with SISR**  
+    you don't need to download/setup it separately  
+
+    VIIPER listens on:
+
+    - `:3241` for USBIP connections
+    - `:3242` for the control API
+
+    See the [VIIPER documentation](https://alia5.github.io/VIIPER/) for more details
+
+## How do I uninstall this? {.toc-anchor}
+
+??? question "How do I uninstall this?"
+
+    The installation scripts as well as the documentation tell you what is happening during install.  
+    To uninstall reverse those steps.  
+
+    === "Windows"
+
+        If you cant be bothered, run this in PowerShell
+
+        ```powershell
+        rm -rf "$env:LOCALAPPDATA\SISR"
+        rm -rf "$env:LOCALAPPDATA\VIIPER"
+        Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "VIIPER" -ErrorAction SilentlyContinue
+        Remove-Item "$( [Environment]::GetFolderPath('Desktop') )\SISR.lnk" -ErrorAction SilentlyContinue
+        Remove-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\SISR.lnk" -ErrorAction SilentlyContinue
+        ```
+        
+        ??? info inline end "Driver Removal"
+            ![Device Manager Driver Removal](../assets/usbip-uninstall.gif)
+
+        The USBIP-Win2 driver can be removed via Device Manager
+
+    === "Linux"
+
+        If you cant be bothered, run this in a terminal
+
+        ```bash
+        rm -rf ~/.local/share/SISR
+        rm -rf ~/.local/share/VIIPER
+        sudo systemctl disable --now viiper.service
+        sudo rm /etc/systemd/system/viiper.service
+        sudo systemctl daemon-reload
+        sudo rm -rf /etc/modules-load.d/viiper.conf
+        ```
+
+        USBIP can be uninstalled via whatever package manager your distribution uses
 
 ## Common Issues
 
 For common issues (doubled controllers, Steam CEF debugging, port conflicts, etc.), see: [Troubleshooting](troubleshooting.md)
-
-## How do I uninstall this?
-
-The installation scripts as well as the documentation tell you what is happening during install.  
-To uninstall reverse those steps.  
-
-=== "Windows"
-
-    If you cant be bothered, run this in PowerShell
-
-    ```powershell
-    rm -rf "$env:LOCALAPPDATA\SISR"
-    rm -rf "$env:LOCALAPPDATA\VIIPER"
-    Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "VIIPER" -ErrorAction SilentlyContinue
-    Remove-Item "$( [Environment]::GetFolderPath('Desktop') )\SISR.lnk" -ErrorAction SilentlyContinue
-    Remove-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\SISR.lnk" -ErrorAction SilentlyContinue
-    ```
-    
-    ??? info inline end "Driver Removal"
-        ![Device Manager Driver Removal](../assets/usbip-uninstall.gif)
-
-    The USBIP-Win2 driver can be removed via Device Manager
-
-=== "Linux"
-
-    If you cant be bothered, run this in a terminal
-
-    ```bash
-    rm -rf ~/.local/share/SISR
-    rm -rf ~/.local/share/VIIPER
-    sudo systemctl disable --now viiper.service
-    sudo rm /etc/systemd/system/viiper.service
-    sudo systemctl daemon-reload
-    sudo rm -rf /etc/modules-load.d/viiper.conf
-    ```
-
-    USBIP can be uninstalled via whatever package manager your distribution uses
 
 ## I want feature XYZ
 
