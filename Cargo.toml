@@ -68,4 +68,4 @@ name = "sisr"
 [package.metadata.viiper]
 viiper-version = "0.3.1"
 allow_dev = true
-fetch_prelease = false
+fetch_prelease = true

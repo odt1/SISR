@@ -25,9 +25,11 @@ that should setup everything you need to get started with SISR quickly
     The script will:
 
     - Download and install (or update) SISR to `%LOCALAPPDATA%\SISR\SISR.exe`
-    - Install (or update) the bundled VIIPER server to `%LOCALAPPDATA%\SISR\viiper.exe`
-    - Setup the USBIP-Win2 driver  
-      <sup>Driver only, not the full USBIP-Win2 package</sup>
+    - Download and install VIIPER
+      Using the [VIIPER install script](https://alia5.github.io/VIIPER/stable/getting-started/installation/#automated-install-script) to
+      `%LOCALAPPDATA%\VIIPER\viiper.exe`
+        - Setup the USBIP-Win2 driver  
+          <sup>Driver only, not the full USBIP-Win2 package</sup>
     - Enable Steam CEF remote debugging
     - Create Desktop and Start Menu shortcuts
 
@@ -56,11 +58,11 @@ that should setup everything you need to get started with SISR quickly
     The script will:
 
     - Download and install SISR to `~/.local/share/SISR/SISR.AppImage`
-    - Attempt to setup USBIP (installation of required packages)
-    - Load the required `vhci-hcd` kernel module  
-      And setup automatic loading on boot
     - Download and install VIIPER as a systemd service  
       Using the [VIIPER install script](https://alia5.github.io/VIIPER/stable/getting-started/installation/#automated-install-script)
+        - Attempt to setup USBIP (installation of required packages)
+        - Load the required `vhci-hcd` kernel module  
+          And setup automatic loading on boot
     - Enable Steam CEF remote debugging
     - Create a Launcher entry for SISR  
 
@@ -93,7 +95,15 @@ that should setup everything you need to get started with SISR quickly
 
 === "Windows"
 
-    VIIPER is bundled with SISR. No separate installation required
+    VIIPER is bundled with SISR.No separate installation required  
+
+    That said, for networked scenarios it's easier to install VIIPER as a standalone service using the [VIIPER install script](https://alia5.github.io/VIIPER/stable/getting-started/installation/#automated-install-script)
+
+    In a powerShell run
+
+    ```powershell
+    irm https://alia5.github.io/VIIPER/stable/install.ps1 | iex
+    ```
 
 === "Linux"
 
