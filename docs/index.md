@@ -56,8 +56,8 @@ Unlike its predecessor [GlosSI](https://github.com/Alia5/GlosSI), it does not us
 ## 🆘 Help
 
 - [Guides](guides/overview.md)
-- [Troubleshooting](misq/troubleshooting.md)
-- [FAQ](misq/faq.md)
+- [Troubleshooting](misc/troubleshooting.md)
+- [FAQ](misc/faq.md)
 
 ## 🛠️ Development
 

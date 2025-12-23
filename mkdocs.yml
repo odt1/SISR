@@ -67,8 +67,8 @@ nav:
     - Installation: getting-started/installation.md
     - Networked usage: guides/networked.md
     - GlosSI like usage: guides/glossi_like.md  
-  - Troubleshooting: misq/troubleshooting.md
-  - FAQ: misq/faq.md
+  - Troubleshooting: misc/troubleshooting.md
+  - FAQ: misc/faq.md
   - Development:
     - Building: dev/building.md
   - Changelog: changelog/

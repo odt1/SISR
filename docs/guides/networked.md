@@ -13,7 +13,7 @@ as dedicated controllers without the need to stream the entire game
 
     While still not perfect, this approach circumvents many issues present in direct USBIP/VirtualHere passthrough solutions.
 
-An explanation on why this can be preferable over other solutions can be found in the [FAQ](../misq/faq.md#why-would-i-want-to-use-this-instead-of-directly-using-usbipvirtualhere-to-forward-controllers)
+An explanation on why this can be preferable over other solutions can be found in the [FAQ](../misc/faq.md#why-would-i-want-to-use-this-instead-of-directly-using-usbipvirtualhere-to-forward-controllers)
 
 ---
 
