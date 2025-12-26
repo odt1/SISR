@@ -1,6 +1,7 @@
 name: Release
 
 on:
+    workflow_dispatch:
     push:
         tags:
             - "v*.*.*"
@@ -93,3 +94,4 @@ jobs:
                   draft: true
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
